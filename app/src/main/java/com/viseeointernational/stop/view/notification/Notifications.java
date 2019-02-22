@@ -66,6 +66,7 @@ public class Notifications {
         builder.setLights(Color.GREEN, 0, 0);
         builder.setVibrate(null);
         builder.setSound(null);
+        builder.setAutoCancel(true);
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, -1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(pendingIntent);
@@ -86,7 +87,7 @@ public class Notifications {
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle(context.getText(R.string.app_name));
         builder.setContentText(text);
-        builder.setAutoCancel(true);
+//        builder.setAutoCancel(true);
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, -1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(pendingIntent);
@@ -136,7 +137,7 @@ public class Notifications {
         }
         builder.setSound(getMovementsSoundUri(alertTuneType));
         builder.setContentText(name + " " + context.getText(R.string.notification_movements) + " " + TimeUtil.getTime(time, format));
-        builder.setAutoCancel(true);
+//        builder.setAutoCancel(true);
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(pendingIntent);

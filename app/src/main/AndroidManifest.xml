@@ -63,6 +63,8 @@
 
         <service android:name=".data.source.android.ble.BleService" />
 
+        <service android:name=".util.AssistService" />
+
         <activity
             android:name=".view.page.detail.DetailActivity"
             android:screenOrientation="portrait" />

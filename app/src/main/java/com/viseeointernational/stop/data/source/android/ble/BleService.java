@@ -1,9 +1,6 @@
 package com.viseeointernational.stop.data.source.android.ble;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -18,18 +15,16 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
-import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.viseeointernational.stop.App;
 import com.viseeointernational.stop.R;
+import com.viseeointernational.stop.util.AssistService;
 import com.viseeointernational.stop.util.StringUtil;
 import com.viseeointernational.stop.util.WriteDataUtil;
 import com.viseeointernational.stop.view.notification.Notifications;
-import com.viseeointernational.stop.view.page.main.MainActivity;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -59,31 +54,14 @@ public class BleService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager != null) {
-            Notification.Builder builder = new Notification.Builder(this);
-            if (Build.VERSION.SDK_INT >= 26) {
-                NotificationChannel channel = notificationManager.getNotificationChannel(Notifications.CHANNEL_ID_FOREGROUND);
-                if (channel == null) {
-                    channel = new NotificationChannel(Notifications.CHANNEL_ID_FOREGROUND, getText(R.string.channel_ble_service), NotificationManager.IMPORTANCE_NONE);
-                    channel.enableLights(false);
-                    channel.enableVibration(false);
-                    channel.setSound(null, Notification.AUDIO_ATTRIBUTES_DEFAULT);
-                    notificationManager.createNotificationChannel(channel);
-                }
-                builder.setChannelId(Notifications.CHANNEL_ID_FOREGROUND);
-            }
-            builder.setSmallIcon(R.mipmap.ic_launcher);
-            builder.setContentTitle(getText(R.string.app_name));
-            builder.setContentText(getText(R.string.running));
-            builder.setLights(Color.GREEN, 0, 0);
-            builder.setVibrate(null);
-            builder.setSound(null);
-            Intent intent = new Intent(this, MainActivity.class);
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, -1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-            builder.setContentIntent(pendingIntent);
-            startForeground(Notifications.NOTIFICATION_ID_FOREGROUND, builder.build());
-        }
+
+        startForeground(Notifications.NOTIFICATION_ID_FOREGROUND, new Notification.Builder(this)
+                .setContentText(getText(R.string.running))
+                .setAutoCancel(true)
+                .build());
+
+        startService(new Intent(this, AssistService.class));// 为了去掉前台服务通知
+
         IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         registerReceiver(registerReceiver, filter);
 
@@ -413,7 +391,7 @@ public class BleService extends Service {
                                             if (validData[0] != (byte) 0xc0) {
                                                 // 收到数据后 释放信号量 收到c0不释放 因为c0是硬件主动发出
                                                 stopAutoReleaseSemaphore();
-                                                if(semaphore.availablePermits() == 0){
+                                                if (semaphore.availablePermits() == 0) {
                                                     semaphore.release();
                                                 }
                                             }
@@ -459,7 +437,7 @@ public class BleService extends Service {
                         public void accept(Long aLong) throws Exception {
                             stopAutoReleaseSemaphore();
                             try {
-                                if(semaphore.availablePermits() == 0){
+                                if (semaphore.availablePermits() == 0) {
                                     semaphore.release();
                                 }
                             } catch (Exception e) {

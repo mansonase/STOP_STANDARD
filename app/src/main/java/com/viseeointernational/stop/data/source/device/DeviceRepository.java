@@ -351,7 +351,7 @@ public class DeviceRepository implements DeviceSource {
                     @Override
                     public void accept(Boolean aBoolean) throws Exception {
                         if (aBoolean) {
-                            bleService.search(10);// 搜索后再重连
+                            bleService.search(15);// 搜索后再重连
                         }
                     }
                 });
