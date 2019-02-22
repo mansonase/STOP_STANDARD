@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <ImageView
+        android:id="@+id/image"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:scaleType="centerCrop"
+        tools:src="@mipmap/ic_default_header" />
+
+    <ImageView
+        android:id="@+id/disconnected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignEnd="@id/image"
+        android:layout_marginEnd="5dp"
+        android:layout_marginTop="5dp"
+        android:src="@mipmap/ic_disconnected"
+        android:visibility="invisible"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/count"
+        android:layout_width="23dp"
+        android:layout_height="23dp"
+        android:layout_alignBottom="@id/image"
+        android:layout_marginBottom="5dp"
+        android:layout_marginStart="5dp"
+        android:background="@drawable/circle_red"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="10dp"
+        android:visibility="invisible"
+        tools:text="99+"
+        tools:visibility="visible" />
+
+    <View
+        android:id="@+id/border"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@drawable/border_red"
+        android:visibility="invisible"
+        tools:visibility="visible" />
+
+</RelativeLayout>

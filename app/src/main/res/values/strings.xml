@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">STOP AT-1 Anti-Theft Device</string>
+
+    <string name="msg_ble_not_supported">BLE not supported!</string>
+    <string name="msg_no_bluetooth_adapter">found no bluetooth adapter!</string>
+    <string name="msg_permissions_not_allowed">Permissions not allowed!</string>
+    <string name="msg_can_not_add">Can not add more devices!</string>
+    <string name="msg_exit">Click again to exit!</string>
+    <string name="msg_rename">Please enter your name!</string>
+    <string name="msg_time_out">Time out!</string>
+    <string name="msg_ble_not_enable">Bluetooth not enable!</string>
+    <string name="msg_device_offline">Device offline!</string>
+    <string name="msg_device_not_available">Device not available!</string>
+    <string name="msg_already_reset">Already reset!</string>
+    <string name="msg_successful">Successful!</string>
+    <string name="msg_failed">Failed!</string>
+    <string name="msg_no_data">No data!</string>
+
+    <string name="title_setting">SETUP</string>
+    <string name="title_send_file">Choose client</string>
+
+    <string name="dialog_force_reset">Can not get location! Please enable location and network on your phone.\nReset anyway?</string>
+    <string name="dialog_force_unpair">This device is not online.\nDelete anyway?</string>
+    <string name="dialog_unpair_warning">Warning! Setup data will be lost, would you like to proceed?</string>
+    <string name="dialog_add_reconnect">Can not connect with STOP AT-1! Would you like to retry?</string>
+    <string name="dialog_change_battery">STOP AT-1 may be paired with another device previously. To release it for pairing again please remove battery and insert it back to allow 2 mins of unlock.</string>
+
+    <string name="key_google_map">AIzaSyAaAvnixLG5wQSThlB6rQbqrv22Zmqh-Dc</string>
+
+    <string name="running">Runing...</string>
+    <string name="channel_ble_service">BLE service</string>
+    <string name="channel_msg">Message</string>
+    <string name="channel_movements">Movements</string>
+
+    <string name="notification_no_device">No device found nearby. If you have the device with you please check if battery is installed properly then rescan.</string>
+    <string name="notification_lost_connection">lost connection at</string>
+    <string name="notification_connected">is connected with your phone.</string>
+    <string name="notification_low_power">Low battery detected! Please change battery (CR2016) as soon as possible.</string>
+    <string name="notification_movements">has detected a movement at</string>
+
+    <string name="waiting">Waiting...</string>
+    <string name="load_device_failed">Load device failed!</string>
+
+    <string name="last_update">Last update:</string>
+    <string name="steady">Steady</string>
+    <string name="movement_detected">Movement Detected!!!</string>
+    <string name="since">Since</string>
+    <string name="at">At</string>
+    <string name="can_not_add_more">Can not add more devices!</string>
+</resources>

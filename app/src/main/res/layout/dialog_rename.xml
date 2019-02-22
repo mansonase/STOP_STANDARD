@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog"
+    android:orientation="vertical">
+
+    <EditText
+        android:id="@+id/name"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:gravity="center"
+        android:hint="Enter your new name!"
+        android:maxLines="1"
+        android:padding="10dp"
+        android:singleLine="true"
+        android:textColor="@android:color/black"
+        android:textSize="16dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
+
+    <Button
+        android:id="@+id/ok"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:foreground="@null"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
+        android:padding="10dp"
+        android:text="Ok"
+        android:textAllCaps="false"
+        android:textColor="@color/textBlue"
+        android:textSize="16dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider" />
+
+    <Button
+        android:id="@+id/dismiss"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:foreground="@null"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
+        android:padding="10dp"
+        android:text="Cancel"
+        android:textAllCaps="false"
+        android:textColor="@color/textBlue"
+        android:textSize="16dp" />
+
+</LinearLayout>

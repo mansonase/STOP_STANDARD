@@ -1,0 +1,55 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.4'
+        
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+ext {
+    minSdkVersion = 18
+    targetSdkVersion = 28
+    compileSdkVersion = 28
+    buildToolsVersion = '28.0.3'
+
+    junitVersion = '4.12'
+    runnerVersion = '1.0.2'
+    espressoVersion = '3.0.2'
+    supportLibraryVersion = '28.0.0'
+    daggerVersion = '2.16'
+    butterknifeVersion = '8.8.1'
+    rxjava2Version = '2.1.8'
+    rxandroidVersion = '2.0.1'
+    rxpermissionsVersion = '0.10.2'
+    roomVersion = "1.1.1"
+    retrofit2Version = "2.3.0"
+
+    MPAndroidChartVersion = "v3.0.3"
+    matisseVersion = "0.5.1"
+    googleMapVersion = "12.0.1"
+    pdfViewerVersion = "2.7.0"
+    picassoVersion = "2.5.2"
+    eventbusVersion = "3.1.1"
+    circleimageviewVersion = "2.1.0"
+}

@@ -1,0 +1,134 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        applicationId "com.viseeointernational.stop"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.1"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../key/triamp.jks')
+            storePassword '123456'
+            keyAlias 'key0'
+            keyPassword '123456'
+        }
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+        }
+
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    def outputFile = output.outputFile
+                    if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                        def time = new Date().format("yyyyMMdd-HHmm")
+                        outputFileName = "STOP_v${defaultConfig.versionName}_${time}_${variant.flavorName}.apk"
+                    }
+                }
+            }
+        }
+    }
+
+    flavorDimensions "default"
+
+    productFlavors {
+        standard {
+            dimension "default"
+            buildConfigField "String","FILE_PROVIDER","\"com.viseeointernational.stop.fileprovider\""
+            manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.fileprovider"]
+        }
+        go {
+            dimension "default"
+            applicationIdSuffix = ".go"
+            buildConfigField "String","FILE_PROVIDER","\"com.viseeointernational.stop.go.fileprovider\""
+            manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.go.fileprovider"]
+        }
+    }
+
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    // findbugs
+//    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+
+    // local unit test
+    testImplementation "junit:junit:$rootProject.junitVersion"
+
+    // android lib test
+    androidTestImplementation "com.android.support.test:runner:$rootProject.runnerVersion"
+
+    // ui test
+    androidTestImplementation "com.android.support.test.espresso:espresso-core:$rootProject.espressoVersion"
+
+    // app
+    implementation "com.android.support:appcompat-v7:$rootProject.supportLibraryVersion"
+
+    // dagger2
+    annotationProcessor "com.google.dagger:dagger-compiler:$rootProject.daggerVersion"
+    implementation "com.google.dagger:dagger:$rootProject.daggerVersion"
+    // dagger.android
+    annotationProcessor "com.google.dagger:dagger-android-processor:$rootProject.daggerVersion"
+    implementation "com.google.dagger:dagger-android:$rootProject.daggerVersion"
+    implementation "com.google.dagger:dagger-android-support:$rootProject.daggerVersion"
+
+    // butterknife
+    annotationProcessor "com.jakewharton:butterknife-compiler:$rootProject.butterknifeVersion"
+    implementation "com.jakewharton:butterknife:$rootProject.butterknifeVersion"
+
+    // rxjava
+    implementation "io.reactivex.rxjava2:rxjava:$rootProject.rxjava2Version"
+    // rxandroid
+    implementation "io.reactivex.rxjava2:rxandroid:$rootProject.rxandroidVersion"
+    // rxpermissions
+    implementation "com.github.tbruyelle:rxpermissions:$rootProject.rxpermissionsVersion"
+
+    // room
+    annotationProcessor "android.arch.persistence.room:compiler:$rootProject.roomVersion"
+    implementation "android.arch.persistence.room:runtime:$rootProject.roomVersion"
+    implementation "android.arch.persistence.room:rxjava2:$rootProject.roomVersion"
+
+    // retrofit2
+    implementation "com.squareup.retrofit2:retrofit:$rootProject.retrofit2Version"
+    implementation "com.squareup.retrofit2:converter-gson:$rootProject.retrofit2Version"
+    implementation "com.squareup.retrofit2:adapter-rxjava2:$rootProject.retrofit2Version"
+
+    // 统计图
+    implementation "com.github.PhilJay:MPAndroidChart:$rootProject.MPAndroidChartVersion"
+
+    // 图片选择器
+    implementation "com.zhihu.android:matisse:$rootProject.matisseVersion"
+
+    // 地图
+    implementation "com.google.android.gms:play-services-maps:$rootProject.googleMapVersion"
+
+    // pdf显示
+    implementation "com.github.barteksc:android-pdf-viewer:$rootProject.pdfViewerVersion"
+
+    // picasso
+    implementation "com.squareup.picasso:picasso:$rootProject.picassoVersion"
+
+    // eventbus
+    implementation "org.greenrobot:eventbus:$rootProject.eventbusVersion"
+
+    // circleimageview
+    implementation "de.hdodenhof:circleimageview:$rootProject.circleimageviewVersion"
+}
