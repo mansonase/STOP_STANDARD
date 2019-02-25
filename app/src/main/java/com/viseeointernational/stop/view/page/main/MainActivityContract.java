@@ -41,6 +41,8 @@ public interface MainActivityContract {
 
         void alertIfForceReset();
 
+        void alertIfEnableLocation();
+
         void showDetail(String address);
 
         void showSetting(String address);

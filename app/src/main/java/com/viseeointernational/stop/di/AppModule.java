@@ -10,6 +10,8 @@ import com.viseeointernational.stop.data.source.base.database.StopDatabase;
 import com.viseeointernational.stop.data.source.base.sharedpreferences.SharedPreferencesHelper;
 import com.viseeointernational.stop.data.source.device.DeviceRepository;
 import com.viseeointernational.stop.data.source.device.DeviceSource;
+import com.viseeointernational.stop.data.source.location.LocationRepository;
+import com.viseeointernational.stop.data.source.location.LocationSource;
 import com.viseeointernational.stop.di.component.AddActivityComponent;
 import com.viseeointernational.stop.di.component.DetailActivityComponent;
 import com.viseeointernational.stop.di.component.MainActivityComponent;
@@ -85,5 +87,11 @@ public class AppModule {
     @Provides
     DeviceSource deviceSource(DeviceRepository deviceRepository) {
         return deviceRepository;
+    }
+
+    @Singleton
+    @Provides
+    LocationSource locationSource(LocationRepository locationRepository) {
+        return locationRepository;
     }
 }

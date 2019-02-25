@@ -37,6 +37,7 @@
     <string name="notification_connected">is connected with your phone.</string>
     <string name="notification_low_power">Low battery detected! Please change battery (CR2016) as soon as possible.</string>
     <string name="notification_movements">has detected a movement at</string>
+    <string name="notification_reconnect_low_power">has changed a new battery.</string>
 
     <string name="waiting">Waiting...</string>
     <string name="load_device_failed">Load device failed!</string>

@@ -382,8 +382,13 @@ public class DeviceRepository implements DeviceSource {
                         public void accept(List<Device> devices) throws Exception {
                             for (int i = 0; i < devices.size(); i++) {
                                 Device device = devices.get(i);
-                                device.currentState = stateDao.getLastStateWithoutType(device.address, StateType.RESET);
-                                device.lastUpdateTime = device.currentState.time;
+                                device.currentState = stateDao.getLastState(device.address);
+                                State updateState = stateDao.getLastStateWithoutType(device.address, StateType.RESET);
+                                if (updateState != null) {
+                                    device.lastUpdateTime = updateState.time;
+                                } else {
+                                    device.lastUpdateTime = device.time;
+                                }
                                 pairedDevices.put(device.address, device);
                             }
                             startAutoConnect();
@@ -578,7 +583,7 @@ public class DeviceRepository implements DeviceSource {
     }
 
     @Override
-    public void reset(@NonNull final String address, boolean force, @NonNull final ResetCallback callback) {
+    public void reset(@NonNull final String address, final double latitude, final double longitude, @NonNull final ResetCallback callback) {
         if (!bleService.isBleAvailable()) {
             callback.onBleNotAvailable();
             return;
@@ -593,21 +598,9 @@ public class DeviceRepository implements DeviceSource {
                 callback.onAlreadyReset();
                 return;
             }
-            Location location = null;
-            try {
-                location = getLastKnownLocation();
-            } catch (SecurityException e) {
-                e.printStackTrace();
-            }
-            if (!force && location == null) {
-                callback.onNoLocation();
-                return;
-            }
             State state = new State();
-            if (location != null) {
-                state.latitude = location.getLatitude();
-                state.longitude = location.getLongitude();
-            }
+            state.latitude = latitude;
+            state.longitude = longitude;
             state.type = StateType.RESET;
             state.address = address;
             state.time = Calendar.getInstance().getTimeInMillis();
@@ -715,7 +708,7 @@ public class DeviceRepository implements DeviceSource {
                     Device device = pairedDevices.get(event.address);
                     Log.d(TAG, "lost connection + " + event.address);
                     if (device.connectionState == ConnectionType.CONNECTED) {
-                        notifications.sendLostConnectionNotification(device.name, Calendar.getInstance().getTimeInMillis(), device.timeFormat);
+                        notifications.sendLostConnectionNotification(device.name, Calendar.getInstance().getTimeInMillis(), device.timeFormat + "  " + TimeFormatType.TIME_DEFAULT);
                     }
                     device.connectionState = ConnectionType.DISCONNECTED;
                 }
@@ -756,7 +749,7 @@ public class DeviceRepository implements DeviceSource {
                             .subscribe(new Consumer<Device>() {
                                 @Override
                                 public void accept(Device device) throws Exception {
-                                    State state = stateDao.getLastState(device.address);
+                                    State state = stateDao.getLastStateWithoutType(device.address, StateType.RESET);
                                     device.lastHistoryState = state;
                                 }
                             });
@@ -871,6 +864,19 @@ public class DeviceRepository implements DeviceSource {
             case BleEvent.A0_CALLBACK:// 收到A0
                 if (event.value[2] == (byte) 0x00) {// 新电池不收历史
                     return;
+                }
+                if (pairedDevices.containsKey(event.address)) {
+                    Device device = pairedDevices.get(event.address);
+                    if (device.lastHistoryState == null) {
+                        return;
+                    }
+                    if ((device.lastHistoryState.indexL != (byte) 0x00 || device.lastHistoryState.indexH != (byte) 0x00) &&
+                            (device.lastHistoryState.indexL != (byte) 0xff && device.lastHistoryState.indexH != (byte) 0xff)) {
+                        if (event.value[3] == (byte) 0x00 && event.value[4] == (byte) 0x00) {
+                            notifications.sendChangeNewBatteryNotification(device.name);
+                            return;
+                        }
+                    }
                 }
                 Observable.create(new ObservableOnSubscribe<State>() {
                     @Override

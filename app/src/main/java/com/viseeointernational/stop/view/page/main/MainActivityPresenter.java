@@ -13,6 +13,7 @@ import com.viseeointernational.stop.data.entity.Device;
 import com.viseeointernational.stop.data.entity.State;
 import com.viseeointernational.stop.data.source.base.sharedpreferences.SharedPreferencesHelper;
 import com.viseeointernational.stop.data.source.device.DeviceSource;
+import com.viseeointernational.stop.data.source.location.LocationSource;
 import com.viseeointernational.stop.util.TimeUtil;
 
 import java.util.Calendar;
@@ -28,14 +29,16 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
 
     private Context context;
     private DeviceSource deviceSource;
+    private LocationSource locationSource;
     private SharedPreferencesHelper sharedPreferencesHelper;
 
     private String address;
 
     @Inject
-    public MainActivityPresenter(Context context, DeviceSource deviceSource, SharedPreferencesHelper sharedPreferencesHelper) {
+    public MainActivityPresenter(Context context, DeviceSource deviceSource, LocationSource locationSource, SharedPreferencesHelper sharedPreferencesHelper) {
         this.context = context;
         this.deviceSource = deviceSource;
+        this.locationSource = locationSource;
         this.sharedPreferencesHelper = sharedPreferencesHelper;
     }
 
@@ -53,8 +56,8 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
             }
             return;
         }
-        if(!deviceSource.isBleEnable()){
-            if(view != null){
+        if (!deviceSource.isBleEnable()) {
+            if (view != null) {
                 view.showEnableBluetooth();
             }
             return;
@@ -229,8 +232,43 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
     }
 
     @Override
-    public void reset(boolean forceReset) {
-        deviceSource.reset(address, forceReset, new DeviceSource.ResetCallback() {
+    public void reset(final boolean forceReset) {
+        if (forceReset) {
+            saveReset(address, 0, 0);
+        } else {
+            if (view != null) {
+                view.showLoading();
+            }
+            locationSource.getLocation(new LocationSource.LocationCallback() {
+                @Override
+                public void onLocationNotEnable() {
+                    if (view != null) {
+                        view.cancelLoading();
+                        view.alertIfEnableLocation();
+                    }
+                }
+
+                @Override
+                public void onLocationLoaded(double latitude, double longitude) {
+                    if (view != null) {
+                        view.cancelLoading();
+                    }
+                    saveReset(address, latitude, longitude);
+                }
+
+                @Override
+                public void onTimeOut() {
+                    if (view != null) {
+                        view.cancelLoading();
+                        view.alertIfForceReset();
+                    }
+                }
+            });
+        }
+    }
+
+    private void saveReset(String address, double latitude, double longitude) {
+        deviceSource.reset(address, latitude, longitude, new DeviceSource.ResetCallback() {
             @Override
             public void onSuccessful() {
                 if (view != null) {
@@ -249,13 +287,6 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
             public void onDeviceDisconnected() {
                 if (view != null) {
                     view.showMessage(R.string.msg_device_offline);
-                }
-            }
-
-            @Override
-            public void onNoLocation() {
-                if (view != null) {
-                    view.alertIfForceReset();
                 }
             }
 

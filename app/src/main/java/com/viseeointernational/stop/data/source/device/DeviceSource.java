@@ -122,12 +122,10 @@ public interface DeviceSource {
 
         void onDeviceDisconnected();
 
-        void onNoLocation();
-
         void onDeviceNotAvailable();
     }
 
-    void reset(@NonNull String address, boolean force, @NonNull ResetCallback callback);
+    void reset(@NonNull String address, double latitude, double longitude, @NonNull ResetCallback callback);
 
     interface SearchCallback {
 

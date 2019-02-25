@@ -116,7 +116,14 @@ public class BleService extends Service {
     public void search(int seconds) {
         BluetoothAdapter adapter = getAdapter();
         if (adapter != null) {
-            adapter.startLeScan(leScanCallback);
+            Observable.just(adapter)
+                    .subscribeOn(Schedulers.newThread())
+                    .subscribe(new Consumer<BluetoothAdapter>() {
+                        @Override
+                        public void accept(BluetoothAdapter bluetoothAdapter) throws Exception {
+                            bluetoothAdapter.startLeScan(leScanCallback);
+                        }
+                    });
             searchDisposable = Observable.timer(seconds, TimeUnit.SECONDS)
                     .subscribe(new Consumer<Long>() {
                         @Override
@@ -152,6 +159,7 @@ public class BleService extends Service {
         }
         BluetoothAdapter adapter = getAdapter();
         if (adapter != null) {
+            Log.d(TAG, "正在连接 " + address);
             BluetoothDevice device = adapter.getRemoteDevice(address);
             device.connectGatt(this, false, bluetoothGattCallback);
         }
@@ -196,8 +204,13 @@ public class BleService extends Service {
                 }
             } else {
                 String address = gatt.getDevice().getAddress();
-                disconnected(address);
-                gatt.close();
+                if (!connectedDevice.containsKey(address)) {
+                    gatt.close();
+                    connect(address);
+                } else {
+                    disconnected(address);
+                    gatt.close();
+                }
             }
         }
 

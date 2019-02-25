@@ -3,6 +3,7 @@ package com.viseeointernational.stop.view.page.main;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.view.KeyEvent;
@@ -264,6 +265,23 @@ public class MainActivity extends BaseActivity implements MainActivityContract.V
             public void onNo(IfDialog dialog) {
             }
         }).show(getText(R.string.dialog_force_reset));
+    }
+
+    @Override
+    public void alertIfEnableLocation() {
+        new IfDialog(this, new IfDialog.Callback() {
+            @Override
+            public void onYes(IfDialog dialog) {
+                Intent intent = new Intent();
+                intent.setAction(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onNo(IfDialog dialog) {
+                alertIfForceReset();
+            }
+        }).show("Can not get location.\nGo to location setting?");
     }
 
     @Override

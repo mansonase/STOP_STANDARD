@@ -94,6 +94,10 @@ public class Notifications {
         notificationManager.notify(NOTIFICATION_ID_MSG, builder.build());
     }
 
+    public void sendChangeNewBatteryNotification(String name){
+        sendMsgNotification(name + " " + context.getText(R.string.notification_reconnect_low_power));
+    }
+
     public void sendNoDeviceFoundNotification() {
         sendMsgNotification(context.getText(R.string.notification_no_device));
     }
