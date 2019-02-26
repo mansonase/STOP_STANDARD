@@ -94,7 +94,7 @@ public class Notifications {
         notificationManager.notify(NOTIFICATION_ID_MSG, builder.build());
     }
 
-    public void sendChangeNewBatteryNotification(String name){
+    public void sendChangeNewBatteryNotification(String name) {
         sendMsgNotification(name + " " + context.getText(R.string.notification_reconnect_low_power));
     }
 
@@ -176,10 +176,19 @@ public class Notifications {
 
             case AlertTuneType.BELL:
                 return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.bell);
+            case AlertTuneType.BUZZER:
+                return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.buzzer);
             case AlertTuneType.DING_DONG:
                 return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ding_dong);
             case AlertTuneType.DRUM:
                 return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.drum);
+
+            case AlertTuneType.FUTURE_SIREN:
+                return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.future_siren);
+            case AlertTuneType.HORN:
+                return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.horn);
+            case AlertTuneType.LASER_GUN:
+                return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.laser_gun);
             case AlertTuneType.SCIFI_BEEP:
                 return Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.scifi_beep);
 

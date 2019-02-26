@@ -76,8 +76,13 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
         alertTunes.add("Vibration");
 
         alertTunes.add("Bell");
+        alertTunes.add("Buzzer");
         alertTunes.add("DingDong");
         alertTunes.add("Drum");
+
+        alertTunes.add("FutureSiren");
+        alertTunes.add("Horn");
+        alertTunes.add("LaserGun");
         alertTunes.add("SciFiBeep");
 
         alertTunes.add("Siren1");
@@ -326,11 +331,24 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
                 case AlertTuneType.BELL:
                     view.playSound(getSoundUri(R.raw.bell));
                     break;
+                case AlertTuneType.BUZZER:
+                    view.playSound(getSoundUri(R.raw.buzzer));
+                    break;
                 case AlertTuneType.DING_DONG:
                     view.playSound(getSoundUri(R.raw.ding_dong));
                     break;
                 case AlertTuneType.DRUM:
                     view.playSound(getSoundUri(R.raw.drum));
+                    break;
+
+                case AlertTuneType.FUTURE_SIREN:
+                    view.playSound(getSoundUri(R.raw.future_siren));
+                    break;
+                case AlertTuneType.HORN:
+                    view.playSound(getSoundUri(R.raw.horn));
+                    break;
+                case AlertTuneType.LASER_GUN:
+                    view.playSound(getSoundUri(R.raw.laser_gun));
                     break;
                 case AlertTuneType.SCIFI_BEEP:
                     view.playSound(getSoundUri(R.raw.scifi_beep));
@@ -368,7 +386,7 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
 
     @Override
     public void enableAlert(boolean enable) {
-        if(view != null){
+        if (view != null) {
             view.showLoading();
         }
         tempAlert = !enable;
@@ -469,7 +487,7 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
 
     @Override
     public void unpair(boolean force) {
-        if(view != null){
+        if (view != null) {
             view.showLoading();
         }
         deviceSource.unpair(address, force, new DeviceSource.SettingCallback() {
