@@ -21,6 +21,8 @@ public class GuideActivity extends BaseActivity implements GuideActivityContract
 
     private static final String URL_BUY_DEVICE = "http://www.viseeo.com";
 
+    public static final int RESULT_BACK = 1;
+
     @Inject
     GuideActivityContract.Presenter presenter;
 
@@ -62,5 +64,11 @@ public class GuideActivity extends BaseActivity implements GuideActivityContract
                 startActivity(intent);
                 break;
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        setResult(RESULT_BACK);
+        super.onBackPressed();
     }
 }

@@ -15,6 +15,7 @@ import com.viseeointernational.stop.data.source.base.sharedpreferences.SharedPre
 import com.viseeointernational.stop.data.source.device.DeviceSource;
 import com.viseeointernational.stop.data.source.location.LocationSource;
 import com.viseeointernational.stop.util.TimeUtil;
+import com.viseeointernational.stop.view.page.guide.GuideActivity;
 
 import java.util.Calendar;
 import java.util.List;
@@ -34,6 +35,8 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
 
     private String address;
 
+    private boolean shouldClose = false;
+
     @Inject
     public MainActivityPresenter(Context context, DeviceSource deviceSource, LocationSource locationSource, SharedPreferencesHelper sharedPreferencesHelper) {
         this.context = context;
@@ -49,6 +52,13 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
     }
 
     private void init() {
+        if (shouldClose) {
+            shouldClose = false;
+            if (view != null) {
+                view.close();
+            }
+            return;
+        }
         if (sharedPreferencesHelper.getIsFirstStart()) {
             if (view != null) {
                 view.showGuide();
@@ -150,6 +160,11 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
             case MainActivity.REQUEST_BLUETOOTH:
                 if (resultCode == Activity.RESULT_OK) {
 
+                }
+                break;
+            case MainActivity.REQUEST_GUIDE:
+                if (resultCode == GuideActivity.RESULT_BACK) {
+                    shouldClose = true;
                 }
                 break;
         }

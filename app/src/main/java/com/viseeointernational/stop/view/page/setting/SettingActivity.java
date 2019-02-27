@@ -418,7 +418,7 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
                         .choose(MimeType.ofImage())
                         .countable(true)
                         .capture(true)
-                        .captureStrategy(new CaptureStrategy(true, "com.triamp.viseeo.fileprovider"))
+                        .captureStrategy(new CaptureStrategy(true, BuildConfig.FILE_PROVIDER))
                         .maxSelectable(1)
                         .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
                         .thumbnailScale(0.7f)

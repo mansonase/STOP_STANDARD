@@ -48,6 +48,8 @@ public interface MainActivityContract {
         void showSetting(String address);
 
         void showAddNewDevice();
+
+        void close();
     }
 
     interface Presenter extends BasePresenter<View> {

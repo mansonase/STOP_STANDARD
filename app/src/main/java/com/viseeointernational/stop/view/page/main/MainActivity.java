@@ -50,6 +50,7 @@ import io.reactivex.functions.Consumer;
 public class MainActivity extends BaseActivity implements MainActivityContract.View {
 
     public static final int REQUEST_BLUETOOTH = 1;
+    public static final int REQUEST_GUIDE = 2;
 
     @BindView(R.id.power)
     BatteryView power;
@@ -113,7 +114,7 @@ public class MainActivity extends BaseActivity implements MainActivityContract.V
 
     @Override
     public void showGuide() {
-        startActivity(new Intent(this, GuideActivity.class));
+        startActivityForResult(new Intent(this, GuideActivity.class), REQUEST_GUIDE);
     }
 
     @Override
@@ -306,6 +307,11 @@ public class MainActivity extends BaseActivity implements MainActivityContract.V
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         presenter.result(requestCode, resultCode, data);
+    }
+
+    @Override
+    public void close() {
+        finish();
     }
 
     @OnClick({R.id.help, R.id.add, R.id.setup, R.id.detail, R.id.reset})
