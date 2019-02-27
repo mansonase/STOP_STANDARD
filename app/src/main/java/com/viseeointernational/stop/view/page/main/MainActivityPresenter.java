@@ -50,7 +50,6 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
 
     private void init() {
         if (sharedPreferencesHelper.getIsFirstStart()) {
-            sharedPreferencesHelper.setIsFirstStart(false);
             if (view != null) {
                 view.showGuide();
             }
@@ -96,8 +95,27 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
         deviceSource.getPairedDevices(new DeviceSource.GetPairedDevicesCallback() {
             @Override
             public void onDevicesLoaded(List<Device> devices) {
+                if (devices.size() == 0) {
+                    sharedPreferencesHelper.setIsFirstStart(true);
+                    if (view != null) {
+                        view.showGuide();
+                    }
+                    return;
+                }
                 if (TextUtils.isEmpty(address) && devices.size() > 0) {
                     address = devices.get(0).address;
+                }
+                if (!TextUtils.isEmpty(address)) {
+                    boolean exist = false;
+                    for (int i = 0; i < devices.size(); i++) {
+                        if (devices.get(i).address.equals(address)) {
+                            exist = true;
+                            break;
+                        }
+                    }
+                    if (!exist && devices.size() > 0) {
+                        address = devices.get(0).address;
+                    }
                 }
                 if (view != null) {
                     view.showDevices(devices, address);
@@ -316,14 +334,22 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
     @Override
     public void showDetail() {
         if (view != null) {
-            view.showDetail(address);
+            if (address == null) {
+                view.showMessage(R.string.msg_device_not_available);
+            } else {
+                view.showDetail(address);
+            }
         }
     }
 
     @Override
     public void showSetting() {
         if (view != null) {
-            view.showSetting(address);
+            if (address == null) {
+                view.showMessage(R.string.msg_device_not_available);
+            } else {
+                view.showSetting(address);
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.viseeointernational.stop.view.custom;
 import android.content.Context;
 import android.graphics.Color;
 import android.util.AttributeSet;
+import android.util.Log;
 
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.components.AxisBase;
@@ -21,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ChartView extends BarChart {
+
+    private static final String TAG = ChartView.class.getSimpleName();
 
     public ChartView(Context context) {
         super(context);
@@ -57,7 +60,7 @@ public class ChartView extends BarChart {
                 if (list.size() > (int) value) {
                     BarEntry barEntry = list.get((int) value);
                     Object object = barEntry.getData();
-                    if (object != null && object instanceof String) {
+                    if (object instanceof String) {
                         return (String) object;
                     }
                 }
@@ -95,7 +98,7 @@ public class ChartView extends BarChart {
     private IValueFormatter iValueFormatter = new IValueFormatter() {
         @Override
         public String getFormattedValue(float value, Entry entry, int dataSetIndex, ViewPortHandler viewPortHandler) {
-            if((int) value == 0){
+            if ((int) value == 0) {
                 return "";
             }
             return (int) value + "";
@@ -105,6 +108,7 @@ public class ChartView extends BarChart {
     private List<BarEntry> list = new ArrayList<>();
 
     public void setData(List<BarEntry> list, int position) {
+        Log.d(TAG, list.size() + "  " + position);
         this.list.clear();
         this.list.addAll(list);
         clear();
@@ -127,7 +131,7 @@ public class ChartView extends BarChart {
         }
         setVisibleXRange(20, 20);
         setVisibleXRange(list.size(), 20);
-        if(position != -1){
+        if (position != -1) {
             zoom(1, 1, position, 1, YAxis.AxisDependency.LEFT);
         }
 //        zoom(1,1, 100, 0);

@@ -132,6 +132,12 @@ public class ConnectFragmentPresenter implements ConnectFragmentContract.Present
             }
             return;
         }
+        if(name.length() > 30){
+            if(view != null){
+                view.showMessage(R.string.msg_name_too_long);
+            }
+            return;
+        }
         deviceSource.setName(address, name);
         reconnectCount = 3;
         if (view != null) {

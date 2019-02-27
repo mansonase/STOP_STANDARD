@@ -143,7 +143,7 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
                     g.setText((progress + 3) + "");
                     break;
                 case R.id.xyz_value:
-                    xyz.setText((progress + 3) + "");
+                    xyz.setText((progress + 10) + "");
                     break;
             }
         }
@@ -303,11 +303,10 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
 
     @Override
     public void sendFile(File file) {
-        String subject = file.getName();
-        subject = subject.substring(0, subject.lastIndexOf("."));
         Intent intent = new Intent(Intent.ACTION_SEND);
+
         intent.setType("application/octet-stream");
-        intent.putExtra(Intent.EXTRA_SUBJECT, "Data - " + subject);
+        intent.putExtra(Intent.EXTRA_SUBJECT, file.getName());
         intent.putExtra(Intent.EXTRA_TEXT, file.getName());
         if (Build.VERSION.SDK_INT >= 24) {
             Uri uri = FileProvider.getUriForFile(this, BuildConfig.FILE_PROVIDER, file);

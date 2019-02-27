@@ -9,7 +9,6 @@ import com.viseeointernational.stop.data.entity.Device;
 import com.viseeointernational.stop.data.entity.State;
 import com.viseeointernational.stop.data.source.device.DeviceSource;
 import com.viseeointernational.stop.util.TimeUtil;
-import com.viseeointernational.stop.view.notification.Notifications;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -44,7 +43,9 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         }
 
         int position = makeChartCurrentPosition(false, chartFrom, chartTo, chartInterval);
-        List<BarEntry> data = makeChart(tempChartData, chartFrom, chartTo, chartInterval, xAxisFormat);
+        List<State> chartData = new ArrayList<>();
+        chartData.addAll(tempChartData);
+        List<BarEntry> data = makeChart(chartData, chartFrom, chartTo, chartInterval, xAxisFormat);
         if (view != null) {
             view.showChart(data, position);
         }

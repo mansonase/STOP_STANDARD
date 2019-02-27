@@ -7,6 +7,7 @@
     <string name="msg_can_not_add">Can not add more devices!</string>
     <string name="msg_exit">Click again to exit!</string>
     <string name="msg_rename">Please enter your name!</string>
+    <string name="msg_name_too_long">Name musb be less than 30 characters!</string>
     <string name="msg_time_out">Time out!</string>
     <string name="msg_ble_not_enable">Bluetooth not enable!</string>
     <string name="msg_device_offline">Device offline!</string>

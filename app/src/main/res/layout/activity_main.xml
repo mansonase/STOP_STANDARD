@@ -99,6 +99,8 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="15dp"
         android:textColor="@color/text"
+        android:singleLine="true"
+        android:maxLines="1"
         android:textSize="30dp"
         tools:text="ssdfsfsdf" />
 

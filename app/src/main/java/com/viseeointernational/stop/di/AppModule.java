@@ -14,6 +14,7 @@ import com.viseeointernational.stop.data.source.location.LocationRepository;
 import com.viseeointernational.stop.data.source.location.LocationSource;
 import com.viseeointernational.stop.di.component.AddActivityComponent;
 import com.viseeointernational.stop.di.component.DetailActivityComponent;
+import com.viseeointernational.stop.di.component.GuideActivityComponent;
 import com.viseeointernational.stop.di.component.MainActivityComponent;
 import com.viseeointernational.stop.di.component.SettingActivityComponent;
 import com.viseeointernational.stop.view.notification.Notifications;
@@ -24,6 +25,7 @@ import dagger.Module;
 import dagger.Provides;
 
 @Module(subcomponents = {MainActivityComponent.class,
+        GuideActivityComponent.class,
         SettingActivityComponent.class,
         DetailActivityComponent.class,
         AddActivityComponent.class})

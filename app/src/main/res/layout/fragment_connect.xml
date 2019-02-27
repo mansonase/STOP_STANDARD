@@ -21,6 +21,8 @@
         android:layout_width="220dp"
         android:layout_height="30dp"
         android:layout_marginTop="15dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         android:background="@drawable/bg_input"
         android:gravity="center"
         android:maxLength="50"
@@ -28,7 +30,7 @@
         android:singleLine="true"
         android:textColor="@color/themeDarkDark"
         android:textSize="16dp"
-        tools:text="sdfsdfds" />
+        tools:text="123456789012345678901234567890" />
 
     <View
         android:layout_width="1dp"

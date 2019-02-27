@@ -134,14 +134,10 @@ public class Notifications {
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle(context.getText(R.string.app_name));
         builder.setLights(Color.GREEN, 1000, 1000);
-        if (alertTuneType == AlertTuneType.VIBRATION) {
-            builder.setVibrate(new long[]{0, 200, 100, 200});
-        } else {
-            builder.setVibrate(null);
-        }
+        builder.setVibrate(new long[]{0, 200, 100, 200});
         builder.setSound(getMovementsSoundUri(alertTuneType));
         builder.setContentText(name + " " + context.getText(R.string.notification_movements) + " " + TimeUtil.getTime(time, format));
-//        builder.setAutoCancel(true);
+        builder.setAutoCancel(true);
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(pendingIntent);
@@ -162,8 +158,8 @@ public class Notifications {
         if (channel == null) {
             channel = new NotificationChannel(channelId, context.getText(R.string.channel_movements), NotificationManager.IMPORTANCE_HIGH);
             channel.enableLights(true);
+            channel.enableVibration(true);
             Uri soundUri = getMovementsSoundUri(alertTuneType);
-            channel.enableVibration(soundUri == null);
             channel.setSound(soundUri, Notification.AUDIO_ATTRIBUTES_DEFAULT);
             notificationManager.createNotificationChannel(channel);
         }

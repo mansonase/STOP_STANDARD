@@ -275,6 +275,12 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     @Override
     public void saveName(String s) {
         if (!TextUtils.isEmpty(s)) {
+            if (s.length() > 30) {
+                if (view != null) {
+                    view.showMessage(R.string.msg_name_too_long);
+                }
+                return;
+            }
             deviceSource.setName(address, s);
             if (view != null) {
                 view.showName(s);
