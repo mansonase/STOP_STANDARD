@@ -16,9 +16,9 @@
             android:id="@+id/add"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
             android:layout_marginStart="15dp"
             android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
             android:background="@mipmap/ic_add_home" />
 
         <ImageButton
@@ -59,8 +59,8 @@
             android:layout_width="wrap_content"
             android:layout_height="60dp"
             android:orientation="horizontal"
-            android:paddingBottom="5dp"
-            android:paddingTop="5dp">
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp">
 
         </LinearLayout>
 
@@ -192,8 +192,8 @@
             android:id="@+id/detail"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
             android:layout_marginStart="15dp"
+            android:layout_marginBottom="10dp"
             android:background="@mipmap/ic_detail" />
 
         <View
@@ -205,8 +205,8 @@
             android:id="@+id/reset"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="10dp"
             android:layout_marginEnd="15dp"
+            android:layout_marginBottom="10dp"
             android:background="@mipmap/ic_reset" />
 
     </LinearLayout>
