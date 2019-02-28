@@ -387,7 +387,7 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
     @Override
     public void showGValue(int value) {
         gValue.setProgress(value - 3);
-        g.setText(value+ "");
+        g.setText(value + "");
     }
 
     @Override

@@ -269,7 +269,7 @@ public class DeviceRepository implements DeviceSource {
 
     private void startGetBattery() {
         stopGetBattery();
-        batteryDisposable = Observable.interval(0, 60, TimeUnit.SECONDS)
+        batteryDisposable = Observable.interval(0, 10, TimeUnit.SECONDS)
                 .subscribeOn(Schedulers.newThread())
                 .subscribe(new Consumer<Long>() {
                     @Override
