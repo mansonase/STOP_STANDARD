@@ -18,7 +18,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
@@ -26,7 +25,6 @@ import android.util.Log;
 
 import com.viseeointernational.stop.App;
 import com.viseeointernational.stop.R;
-import com.viseeointernational.stop.util.WriteDataUtil;
 import com.viseeointernational.stop.view.notification.Notifications;
 import com.viseeointernational.stop.view.page.main.MainActivity;
 
@@ -50,66 +48,65 @@ public class BleService extends Service {
     private static final UUID UUID_CHARACTERISTIC = UUID.fromString("00001525-1212-efde-1523-785feabcd123");
     private static final UUID UUID_DESCRIPTOR = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
-    private Map<String, BleDevice> connectedDevice = new HashMap<>();
+    private Map<String, BleDevice> connectedDevice = new HashMap<>();// 保存已连接的设备
 
-    private Disposable searchDisposable;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-
-        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (notificationManager != null) {
-            Notification.Builder builder = new Notification.Builder(this);
-            if (Build.VERSION.SDK_INT >= 26) {
-                NotificationChannel channel = notificationManager.getNotificationChannel(Notifications.CHANNEL_ID_FOREGROUND);
-                if (channel == null) {
-                    channel = new NotificationChannel(Notifications.CHANNEL_ID_FOREGROUND, getText(R.string.channel_ble_service), NotificationManager.IMPORTANCE_NONE);
-                    channel.enableLights(false);
-                    channel.enableVibration(false);
-                    channel.setSound(null, Notification.AUDIO_ATTRIBUTES_DEFAULT);
-                    notificationManager.createNotificationChannel(channel);
-                }
-                builder.setChannelId(Notifications.CHANNEL_ID_FOREGROUND);
-            }
-            builder.setSmallIcon(R.mipmap.ic_launcher);
-            builder.setContentTitle(getText(R.string.app_name));
-            builder.setContentText(getText(R.string.running));
-            builder.setLights(Color.GREEN, 0, 0);
-            builder.setVibrate(null);
-            builder.setSound(null);
-            builder.setAutoCancel(true);
-            Intent intent = new Intent(this, MainActivity.class);
-            PendingIntent pendingIntent = PendingIntent.getActivity(this, -1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-            builder.setContentIntent(pendingIntent);
-            startForeground(Notifications.NOTIFICATION_ID_FOREGROUND, builder.build());
-        }
-
-        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-        registerReceiver(registerReceiver, filter);
-
-        ((App) getApplication()).setBleService(this);
-    }
+    private Disposable disposable;// 搜索
 
     private BroadcastReceiver registerReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
             switch (state) {
-                case BluetoothAdapter.STATE_OFF:
-                    for (Map.Entry<String, BleDevice> entry : connectedDevice.entrySet()) {
-                        entry.getValue().disconnect();
-                        entry.getValue().release();
-                    }
-                    connectedDevice.clear();
-                    sendEvent(BleEvent.ADAPTER_DISABLE, "", "", 0, null);
+                case BluetoothAdapter.STATE_OFF:// 蓝牙关闭时
+                    Log.d(TAG, "蓝牙关闭");
+                    clearDevices();
+                    sendEvent(BleEvent.BLUETOOTH_ADAPTER_DISABLE, null, null, 0, null);
                     break;
-                case BluetoothAdapter.STATE_ON:
-                    sendEvent(BleEvent.ADAPTER_ENABLE, "", "", 0, null);
+                case BluetoothAdapter.STATE_ON:// 蓝牙开启时
+                    Log.d(TAG, "蓝牙开启");
+                    sendEvent(BleEvent.BLUETOOTH_ADAPTER_ENABLE, null, null, 0, null);
                     break;
             }
         }
     };
+
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        Log.d(TAG, "服务创建");
+
+        startForeground();// 开启前台服务
+
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        registerReceiver(registerReceiver, filter);
+
+        ((App) getApplication()).setBleService(this);// 依赖注入
+    }
+
+    private void startForeground() {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager == null) {
+            return;
+        }
+        Notification.Builder builder = new Notification.Builder(this);
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channel = notificationManager.getNotificationChannel(Notifications.CHANNEL_ID_FOREGROUND);
+            if (channel == null) {
+                channel = new NotificationChannel(Notifications.CHANNEL_ID_FOREGROUND, getText(R.string.channel_ble_service), NotificationManager.IMPORTANCE_NONE);
+                notificationManager.createNotificationChannel(channel);
+            }
+            builder.setChannelId(Notifications.CHANNEL_ID_FOREGROUND);
+        }
+        builder.setSmallIcon(R.mipmap.ic_launcher);
+        builder.setContentTitle(getText(R.string.app_name));
+        builder.setContentText(getText(R.string.running));
+        Intent intent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, -1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        builder.setContentIntent(pendingIntent);
+        startForeground(Notifications.NOTIFICATION_ID_FOREGROUND, builder.build());
+    }
 
     @Nullable
     @Override
@@ -119,15 +116,26 @@ public class BleService extends Service {
 
     @Override
     public void onDestroy() {
+        Log.d(TAG, "服务销毁");
         unregisterReceiver(registerReceiver);
-        for (Map.Entry<String, BleDevice> entry : connectedDevice.entrySet()) {
-            entry.getValue().disconnect();
-            entry.getValue().release();
-        }
+        clearDevices();
         stopForeground(true);
         super.onDestroy();
     }
 
+    // 清除已连接设备
+    private void clearDevices() {
+        for (Map.Entry<String, BleDevice> entry : connectedDevice.entrySet()) {
+            BleDevice bleDevice = entry.getValue();
+            BluetoothGatt gatt = bleDevice.getBluetoothGatt();
+            gatt.disconnect();
+            gatt.close();
+            bleDevice.release();
+        }
+        connectedDevice.clear();
+    }
+
+    // 蓝牙是否开启
     public boolean isBleAvailable() {
         BluetoothAdapter adapter = getAdapter();
         if (adapter != null) {
@@ -136,44 +144,61 @@ public class BleService extends Service {
         return false;
     }
 
+    // 搜索
     public void search(int seconds) {
-        BluetoothAdapter adapter = getAdapter();
-        if (adapter != null) {
-            Observable.just(adapter)
-                    .subscribeOn(Schedulers.newThread())
-                    .subscribe(new Consumer<BluetoothAdapter>() {
-                        @Override
-                        public void accept(BluetoothAdapter bluetoothAdapter) throws Exception {
-                            bluetoothAdapter.startLeScan(leScanCallback);
-                        }
-                    });
-            searchDisposable = Observable.timer(seconds, TimeUnit.SECONDS)
-                    .subscribe(new Consumer<Long>() {
-                        @Override
-                        public void accept(Long aLong) throws Exception {
-                            sendEvent(BleEvent.SEARCH_FINISH, null, null, 0, null);
-                            stopSearch();
-                        }
-                    });
+        final BluetoothAdapter adapter = getAdapter();
+        if (adapter == null) {
+            return;
         }
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
+            disposable = null;
+        }
+        Observable.just(1)
+                .subscribeOn(Schedulers.newThread())
+                .subscribe(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer integer) throws Exception {
+                        adapter.stopLeScan(leScanCallback);
+                        adapter.startLeScan(leScanCallback);
+                    }
+                });
+        disposable = Observable.timer(seconds, TimeUnit.SECONDS)
+                .subscribe(new Consumer<Long>() {
+                    @Override
+                    public void accept(Long aLong) throws Exception {
+                        stopSearch();
+                        sendEvent(BleEvent.SEARCH_FINISH, null, null, 0, null);
+                    }
+                });
+
     }
 
     private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback() {
 
         @Override
         public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-            sendEvent(BleEvent.DEVICE_FOUND_CALLBACK, device.getAddress(), device.getName(), rssi, null);
+            sendEvent(BleEvent.SEARCH_DEVICE_FOUND, device.getAddress(), device.getName(), rssi, null);
         }
     };
 
     public void stopSearch() {
-        if (searchDisposable != null && !searchDisposable.isDisposed()) {
-            searchDisposable.dispose();
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
+            disposable = null;
         }
-        BluetoothAdapter adapter = getAdapter();
-        if (adapter != null) {
-            adapter.stopLeScan(leScanCallback);
+        final BluetoothAdapter adapter = getAdapter();
+        if (adapter == null) {
+            return;
         }
+        Observable.just(1)
+                .subscribeOn(Schedulers.newThread())
+                .subscribe(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer integer) throws Exception {
+                        adapter.stopLeScan(leScanCallback);
+                    }
+                });
     }
 
     public void connect(String address) {
@@ -190,14 +215,13 @@ public class BleService extends Service {
 
     public void disconnect(String address) {
         if (connectedDevice.containsKey(address)) {
-            connectedDevice.get(address).disconnect();
+            connectedDevice.get(address).getBluetoothGatt().disconnect();
         }
     }
 
     public void write(String address, byte[] validData) {
-        byte[] data = WriteDataUtil.getWriteData(validData);// 将有效数据加上起始位 长度 校验
         if (connectedDevice.containsKey(address)) {
-            connectedDevice.get(address).receiveWriteData(data);
+            connectedDevice.get(address).receiveWriteData(validData);
         }
     }
 
@@ -218,48 +242,55 @@ public class BleService extends Service {
                     gatt.discoverServices();
                 } else {
                     String address = gatt.getDevice().getAddress();
-                    disconnected(address);
                     gatt.close();
+                    Log.d(TAG, "已断开连接 " + address);
+                    releaseDevice(address);
+                    sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0, null);
                 }
             } else {
                 String address = gatt.getDevice().getAddress();
-                if (!connectedDevice.containsKey(address)) {
-                    gatt.close();
+                gatt.close();
+                if (!connectedDevice.containsKey(address)) {// 正在连接的设备要重连
+                    Log.d(TAG, "正在重连 " + address);
                     connect(address);
-                } else {
-                    disconnected(address);
-                    gatt.close();
+                } else {// 已连接的设备断开连接
+                    Log.d(TAG, "连接失败 " + address);
+                    releaseDevice(address);
+                    sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0, null);
                 }
             }
         }
 
-        private void disconnected(String address) {
+        // 释放设备
+        private void releaseDevice(String address) {
             if (connectedDevice.containsKey(address)) {
                 connectedDevice.get(address).release();
                 connectedDevice.remove(address);
             }
-            sendEvent(BleEvent.DISCONNECTED, address, null, 0, null);
         }
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 BluetoothGattService service = gatt.getService(UUID_SERVICE);
-                if (service != null) {
-                    BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHARACTERISTIC);
-                    if (characteristic != null) {
-                        gatt.setCharacteristicNotification(characteristic, true);
-                        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_DESCRIPTOR);
-                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-                        gatt.writeDescriptor(descriptor);
-
-                        // 连接成功
-                        String address = gatt.getDevice().getAddress();
-                        BleDevice tool = new BleDevice(address, gatt, characteristic);
-                        connectedDevice.put(address, tool);
-                        sendEvent(BleEvent.CONNECTED, address, null, 0, null);
-                    }
+                if (service == null) {
+                    return;
                 }
+                BluetoothGattCharacteristic characteristic = service.getCharacteristic(UUID_CHARACTERISTIC);
+                if (characteristic == null) {
+                    return;
+                }
+                gatt.setCharacteristicNotification(characteristic, true);
+                BluetoothGattDescriptor descriptor = characteristic.getDescriptor(UUID_DESCRIPTOR);
+                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                gatt.writeDescriptor(descriptor);
+
+                // 连接成功
+                String address = gatt.getDevice().getAddress();
+                BleDevice tool = new BleDevice(address, gatt, characteristic);
+                connectedDevice.put(address, tool);
+                Log.d(TAG, "连接成功 " + address);
+                sendEvent(BleEvent.GATT_CONNECTED, address, null, 0, null);
             }
         }
 
@@ -267,15 +298,9 @@ public class BleService extends Service {
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             byte[] data = characteristic.getValue();
             String address = gatt.getDevice().getAddress();
-
-            if (connectedDevice.containsKey(address)) {
+            if (connectedDevice.containsKey(address)) {// 收到数据丢给相应的设备
                 connectedDevice.get(address).receiveReadData(data);
             }
-        }
-
-        @Override
-        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-
         }
     };
 

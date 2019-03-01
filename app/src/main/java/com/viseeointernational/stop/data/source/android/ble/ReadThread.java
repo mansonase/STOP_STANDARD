@@ -12,8 +12,8 @@ public class ReadThread extends Thread {
 
     private boolean isFF;
     private boolean isAA;
-    private byte[] validData;// 不包含长度位和校验位
-    private int validIndex;
+    private byte[] result;// 不包含长度位和校验位
+    private int index;
     private byte chksum;
 
     public ReadThread(@NonNull Callback callback) {
@@ -34,27 +34,31 @@ public class ReadThread extends Thread {
                     if (!isAA) {
                         if (b == (byte) 0xaa) {
                             isAA = true;// 判断第二个字节是aa
-                            validIndex = 0;
-                            validData = null;
-                            chksum = 0;
+                            index = 3;
+                            result = null;
+                            chksum = (byte) 0x00;
                         } else {
                             isFF = false;
                         }
                     } else {
-                        if (validData == null) {
-                            validData = new byte[b - 1];// 第三个字节是长度
+                        if (result == null) {
+                            result = new byte[b + 3];// 第三个字节是长度
+                            result[0] = (byte) 0xff;
+                            result[1] = (byte) 0xaa;
+                            result[2] = b;
                             chksum += b;
                         } else {
-                            if (validIndex == validData.length) {// 判断读到最后一条数据的最后一个字节
+                            if (index == result.length - 1) {// 判断读到最后一条数据的最后一个字节
                                 if (chksum == b) {// 判断校验是否正确
-                                    callback.onRead(validData);
+                                    result[index] = chksum;
+                                    callback.onRead(result);
                                 }
                                 isFF = isAA = false;
                             } else {
-                                validData[validIndex] = b;
+                                result[index] = b;
                                 chksum += b;
                             }
-                            validIndex++;
+                            index++;
                         }
                     }
                 }

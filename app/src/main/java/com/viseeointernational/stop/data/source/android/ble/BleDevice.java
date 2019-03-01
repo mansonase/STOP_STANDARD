@@ -40,13 +40,21 @@ public class BleDevice implements ReadThread.Callback, WriteThread.Callback {
         writeThread.start();
     }
 
+    public BluetoothGatt getBluetoothGatt() {
+        return bluetoothGatt;
+    }
+
     @Override
     public void onRead(byte[] data) {
         Log.d(TAG, "address = " + address + "  read = " + StringUtil.bytes2HexString(data));
         if (semaphore.availablePermits() == 0) {
             semaphore.release();
         }
-        handleReadData(address, data);
+        BleEvent event = new BleEvent();
+        event.type = BleEvent.READ_DATA;
+        event.address = address;
+        event.value = data;
+        EventBus.getDefault().post(event);
     }
 
     @Override
@@ -56,7 +64,8 @@ public class BleDevice implements ReadThread.Callback, WriteThread.Callback {
             startAutoReleaseSemaphore();
             characteristic.setValue(data);
             boolean state = bluetoothGatt.writeCharacteristic(characteristic);
-            Log.d(TAG, "address = " + address + " write = " + StringUtil.bytes2HexString(data) + " 写" + (state ? "成功" : "失败"));
+            Log.d(TAG, "address = " + address + " write = "
+                    + StringUtil.bytes2HexString(data) + " 写" + (state ? "成功" : "失败"));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -78,12 +87,28 @@ public class BleDevice implements ReadThread.Callback, WriteThread.Callback {
         readThread.addData(data);
     }
 
-    public void receiveWriteData(byte[] data) {
+    public void receiveWriteData(byte[] validData) {
+        byte[] data = getWriteData(validData);
         writeThread.addData(data);
     }
 
-    public void disconnect() {
-        bluetoothGatt.disconnect();
+    /**
+     * 获取完整数据
+     *
+     * @param validData 除了开头 长度 校验之后的有效数据
+     * @return
+     */
+    private byte[] getWriteData(byte[] validData) {
+        byte[] ret = new byte[validData.length + 4];
+        ret[0] = (byte) 0xff;
+        ret[1] = (byte) 0xaa;
+        ret[2] = (byte) (validData.length + 1);
+        ret[ret.length - 1] = ret[2];
+        for (byte b : validData) {
+            ret[ret.length - 1] += b;
+        }
+        System.arraycopy(validData, 0, ret, 3, validData.length);
+        return ret;
     }
 
     private void stopAutoReleaseSemaphore() {
@@ -110,60 +135,6 @@ public class BleDevice implements ReadThread.Callback, WriteThread.Callback {
                         }
                     }
                 });
-    }
-
-    private void handleReadData(String address, byte[] validData) {
-        if (validData.length == 5 && validData[0] == (byte) 0xb0) {
-            sendEvent(BleEvent.PAIR_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 2 && validData[0] == (byte) 0xb1) {
-            sendEvent(BleEvent.COMFIRM_PAIR_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 12 && validData[0] == (byte) 0xb2) {
-            sendEvent(BleEvent.CONNECT_SUCCESSFUL_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 2 && validData[0] == (byte) 0xee) {
-            sendEvent(BleEvent.CONNECT_FAILED_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 12 && validData[0] == (byte) 0xa0) {
-            sendEvent(BleEvent.A0_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 124 && validData[0] == (byte) 0xa1) {
-            sendEvent(BleEvent.A1_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 2 && validData[0] == (byte) 0xa3) {
-            sendEvent(BleEvent.BATTERY_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 12 && validData[0] == (byte) 0xc0) {
-            sendEvent(BleEvent.C0_CALLBACK, address, null, 0, validData);
-            return;
-        }
-        if (validData.length == 6 && validData[0] == (byte) 0xa4) {
-            sendEvent(BleEvent.SET_MODE_CALLBACK, address, null, 0, validData);
-        }
-        if (validData.length == 1 && validData[0] == (byte) 0xaa) {
-            sendEvent(BleEvent.BEEP_CALLBACK, address, null, 0, validData);
-        }
-        if (validData.length == 1 && validData[0] == (byte) 0xa8) {
-            sendEvent(BleEvent.UNPAIR_CALLBACK, address, null, 0, validData);
-        }
-    }
-
-    private void sendEvent(int type, String address, String name, int rssi, byte[] value) {
-        BleEvent event = new BleEvent();
-        event.type = type;
-        event.address = address;
-        event.name = name;
-        event.rssi = rssi;
-        event.value = value;
-        EventBus.getDefault().post(event);
     }
 
 }

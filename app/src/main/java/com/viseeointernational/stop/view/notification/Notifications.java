@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 
+import com.viseeointernational.stop.BuildConfig;
 import com.viseeointernational.stop.R;
 import com.viseeointernational.stop.data.constant.AlertTuneType;
 import com.viseeointernational.stop.util.TimeUtil;
@@ -134,7 +135,7 @@ public class Notifications {
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle(context.getText(R.string.app_name));
         builder.setLights(Color.GREEN, 1000, 1000);
-        builder.setVibrate(new long[]{0, 200, 100, 200});
+        builder.setVibrate(BuildConfig.VIBRATE_PATTERN);
         builder.setSound(getMovementsSoundUri(alertTuneType));
         builder.setContentText(name + " " + context.getText(R.string.notification_movements) + " " + TimeUtil.getTime(time, format));
         builder.setAutoCancel(true);
@@ -159,6 +160,7 @@ public class Notifications {
             channel = new NotificationChannel(channelId, context.getText(R.string.channel_movements), NotificationManager.IMPORTANCE_HIGH);
             channel.enableLights(true);
             channel.enableVibration(true);
+            channel.setVibrationPattern(BuildConfig.VIBRATE_PATTERN);
             Uri soundUri = getMovementsSoundUri(alertTuneType);
             channel.setSound(soundUri, Notification.AUDIO_ATTRIBUTES_DEFAULT);
             notificationManager.createNotificationChannel(channel);

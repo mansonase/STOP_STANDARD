@@ -8,8 +8,8 @@ android {
         applicationId "com.viseeointernational.stop"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 5
-        versionName "1.0.5"
+        versionCode 6
+        versionName "1.0.6"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
@@ -52,12 +52,14 @@ android {
         standard {
             dimension "default"
             buildConfigField "String","FILE_PROVIDER","\"com.viseeointernational.stop.fileprovider\""
+            buildConfigField "long[]","VIBRATE_PATTERN", "new long[]{0, 200, 100, 200}"
             manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.fileprovider"]
         }
         go {
             dimension "default"
             applicationIdSuffix = ".go"
             buildConfigField "String","FILE_PROVIDER","\"com.viseeointernational.stop.go.fileprovider\""
+            buildConfigField "long[]","VIBRATE_PATTERN", "new long[]{0, 100, 50, 100}"
             manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.go.fileprovider"]
         }
     }
@@ -66,9 +68,6 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-    // findbugs
-//    implementation 'com.google.code.findbugs:jsr305:3.0.2'
 
     // local unit test
     testImplementation "junit:junit:$rootProject.junitVersion"
