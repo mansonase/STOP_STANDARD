@@ -397,6 +397,15 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
         }
         tempAlert = !enable;
         deviceSource.enableAlert(address, enable, new DeviceSource.SettingCallback() {
+
+            @Override
+            public void onFailed() {
+                if (view != null) {
+                    view.cancelLoading();
+                    view.showMessage(R.string.msg_failed);
+                }
+            }
+
             @Override
             public void onSuccessful() {
                 if (view != null) {
@@ -449,6 +458,15 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
             view.showLoading();
         }
         deviceSource.find(address, new DeviceSource.SettingCallback() {
+
+            @Override
+            public void onFailed() {
+                if (view != null) {
+                    view.cancelLoading();
+                    view.showMessage(R.string.msg_failed);
+                }
+            }
+
             @Override
             public void onSuccessful() {
                 if (view != null) {
@@ -497,6 +515,14 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
             view.showLoading();
         }
         deviceSource.unpair(address, force, new DeviceSource.SettingCallback() {
+            @Override
+            public void onFailed() {
+                if (view != null) {
+                    view.cancelLoading();
+                    view.showMessage(R.string.msg_failed);
+                }
+            }
+
             @Override
             public void onSuccessful() {
                 if (view != null) {
@@ -695,13 +721,26 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     private boolean tempEnableXYZ;
 
     @Override
+    public void saveTempEnableGAndEYZ(boolean enableG, boolean enableXYZ) {
+        tempEnableG = enableG;
+        tempEnableXYZ = enableXYZ;
+    }
+
+    @Override
     public void enableGAndXYZ(boolean enableG, boolean enableXYZ) {
         if (view != null) {
             view.showLoading();
         }
-        tempEnableG = !enableG;
-        tempEnableXYZ = !enableXYZ;
         deviceSource.enableGAndXYZ(address, enableG, enableXYZ, new DeviceSource.SettingCallback() {
+
+            @Override
+            public void onFailed() {
+                if (view != null) {
+                    view.cancelLoading();
+                    view.showMessage(R.string.msg_failed);
+                }
+            }
+
             @Override
             public void onSuccessful() {
                 if (view != null) {
@@ -758,6 +797,15 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
             view.showLoading();
         }
         deviceSource.setG(address, (byte) g, new DeviceSource.SettingCallback() {
+
+            @Override
+            public void onFailed() {
+                if (view != null) {
+                    view.cancelLoading();
+                    view.showMessage(R.string.msg_failed);
+                }
+            }
+
             @Override
             public void onSuccessful() {
                 if (view != null) {
@@ -806,6 +854,15 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
             view.showLoading();
         }
         deviceSource.setXYZ(address, (byte) xyz, new DeviceSource.SettingCallback() {
+
+            @Override
+            public void onFailed() {
+                if (view != null) {
+                    view.cancelLoading();
+                    view.showMessage(R.string.msg_failed);
+                }
+            }
+
             @Override
             public void onSuccessful() {
                 if (view != null) {

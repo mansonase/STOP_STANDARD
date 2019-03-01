@@ -1,6 +1,5 @@
 package com.viseeointernational.stop.data.source.device;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -55,20 +54,56 @@ public class DeviceRepository implements DeviceSource {
     private DeviceDao deviceDao;
     private StateDao stateDao;
     private BleService bleService;
-    private Context context;
     private Notifications notifications;
 
     private Map<String, Device> pairedDevices = new LinkedHashMap<>();
 
     @Inject
-    public DeviceRepository(DeviceDao deviceDao, StateDao stateDao, BleService bleService, Context context, Notifications notifications) {
+    public DeviceRepository(DeviceDao deviceDao, StateDao stateDao, BleService bleService, Notifications notifications) {
         this.deviceDao = deviceDao;
         this.stateDao = stateDao;
         this.bleService = bleService;
-        this.context = context;
         this.notifications = notifications;
         EventBus.getDefault().register(this);
     }
+
+    /**********************************************自动重连****************************************************/
+    private Disposable autoDisposable;
+
+    private void startAutoConnect() {
+        stopAutoConnect();
+        autoDisposable = Observable.interval(0, 20, TimeUnit.SECONDS)
+                .subscribeOn(Schedulers.newThread())
+                .map(new Function<Long, Boolean>() {
+                    @Override
+                    public Boolean apply(Long aLong) throws Exception {// 判断是否有未连接的设备
+                        for (Map.Entry<String, Device> entry : pairedDevices.entrySet()) {
+                            if (entry.getValue().connectionState == ConnectionType.DISCONNECTED) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                })
+                .subscribe(new Consumer<Boolean>() {
+                    @Override
+                    public void accept(Boolean aBoolean) throws Exception {// 搜索后再重连
+                        if (aBoolean) {
+                            bleService.search(10);
+                        }
+                        Log.d(TAG, "是否有重连 = " + aBoolean);
+                    }
+                });
+    }
+
+    private void stopAutoConnect() {
+        if (autoDisposable != null && !autoDisposable.isDisposed()) {
+            autoDisposable.dispose();
+            autoDisposable = null;
+        }
+    }
+
+    /**************************************************************************************************/
 
     @Override
     public boolean isBleEnable() {
@@ -82,6 +117,12 @@ public class DeviceRepository implements DeviceSource {
             stopAutoConnect();
             bleService.stopSelf();
         }
+    }
+
+    /**********************************************添加获取设备***************************************************/
+    @Override
+    public void saveDevice(@NonNull Device device) {
+        saveDeviceToDatabase(device);
     }
 
     @Override
@@ -126,10 +167,65 @@ public class DeviceRepository implements DeviceSource {
     }
 
     @Override
+    public void getPairedDevices(@NonNull final GetPairedDevicesCallback callback) {
+        if (pairedDevices.size() > 0) {
+            List<Device> list = new ArrayList<>(pairedDevices.values());
+            callback.onDevicesLoaded(list);
+            return;
+        }
+        Observable.just(1)
+                .subscribeOn(Schedulers.io())
+                .map(new Function<Integer, List<Device>>() {
+                    @Override
+                    public List<Device> apply(Integer integer) throws Exception {// 从数据库获取已配对数据
+                        return deviceDao.getPairedDevice();
+                    }
+                })
+                .doOnNext(new Consumer<List<Device>>() {
+                    @Override
+                    public void accept(List<Device> devices) throws Exception {// 具有pairid的设备放入缓存
+                        for (int i = 0; i < devices.size(); i++) {
+                            Device device = devices.get(i);
+                            device.currentState = stateDao.getLastState(device.address);
+                            State updateState = stateDao.getLastStateWithoutType(device.address, StateType.RESET);
+                            if (updateState != null) {
+                                device.lastUpdateTime = updateState.time;
+                            } else {
+                                device.lastUpdateTime = device.time;
+                            }
+                            pairedDevices.put(device.address, device);
+                        }
+                    }
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<List<Device>>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(List<Device> devices) {
+                        List<Device> list = new ArrayList<>(pairedDevices.values());
+                        callback.onDevicesLoaded(list);
+                        startAutoConnect();// 开启自动重连
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
+    }
+
+    @Override
     public void getPairedDeviceCount(@NonNull GetPairedDeviceCountCallback callback) {
         callback.onCountLoaded(pairedDevices.size());
     }
 
+    /**********************************************获取状态***************************************************/
     @Override
     public void getStatesContainTimeFormat(@NonNull final String address, final long from, final long to, @NonNull final GetStatesContainTimeFormatCallback callback) {
         Observable.create(new ObservableOnSubscribe<List<State>>() {
@@ -145,7 +241,6 @@ public class DeviceRepository implements DeviceSource {
                 .subscribe(new Observer<List<State>>() {
                     @Override
                     public void onSubscribe(Disposable d) {
-
                     }
 
                     @Override
@@ -159,16 +254,10 @@ public class DeviceRepository implements DeviceSource {
 
                     @Override
                     public void onError(Throwable e) {
-                        String format = TimeFormatType.DATE_1_1;
-                        if (pairedDevices.containsKey(address)) {
-                            format = pairedDevices.get(address).timeFormat;
-                        }
-                        callback.onStatesLoaded(new ArrayList<State>(), format);
                     }
 
                     @Override
                     public void onComplete() {
-
                     }
                 });
     }
@@ -188,7 +277,6 @@ public class DeviceRepository implements DeviceSource {
                 .subscribe(new Observer<List<State>>() {
                     @Override
                     public void onSubscribe(Disposable d) {
-
                     }
 
                     @Override
@@ -198,12 +286,10 @@ public class DeviceRepository implements DeviceSource {
 
                     @Override
                     public void onError(Throwable e) {
-                        callback.onStatesLoaded(new ArrayList<State>());
                     }
 
                     @Override
                     public void onComplete() {
-
                     }
                 });
     }
@@ -223,7 +309,6 @@ public class DeviceRepository implements DeviceSource {
                 .subscribe(new Observer<List<State>>() {
                     @Override
                     public void onSubscribe(Disposable d) {
-
                     }
 
                     @Override
@@ -233,36 +318,22 @@ public class DeviceRepository implements DeviceSource {
 
                     @Override
                     public void onError(Throwable e) {
-                        callback.onStatesLoaded(new ArrayList<State>());
                     }
 
                     @Override
                     public void onComplete() {
-
                     }
                 });
     }
 
-    // 获取电量
+    /**********************************************监听电量***************************************************/
     private String batteryListenerAddress;
     private BatteryListener batteryListener;
     private Disposable batteryDisposable;
 
-    @Override
-    public void setBatteryListener(@NonNull String address, @Nullable BatteryListener listener) {
-        batteryListenerAddress = address;
-        batteryListener = listener;
-        if (batteryListener != null) {
-            startGetBattery();
-        } else {
-            stopGetBattery();
-        }
-    }
-
-    private void stopGetBattery() {
-        if (batteryDisposable != null && !batteryDisposable.isDisposed()) {
-            batteryDisposable.dispose();
-            batteryDisposable = null;
+    private void handleBatteryListen(final String address, int power) {
+        if (batteryListener != null && address.equals(batteryListenerAddress)) {
+            batteryListener.onPowerReceived(power);
         }
     }
 
@@ -280,9 +351,33 @@ public class DeviceRepository implements DeviceSource {
                 });
     }
 
-    // 监听触发
+    private void stopGetBattery() {
+        if (batteryDisposable != null && !batteryDisposable.isDisposed()) {
+            batteryDisposable.dispose();
+            batteryDisposable = null;
+        }
+    }
+
+    @Override
+    public void setBatteryListener(@NonNull String address, @Nullable BatteryListener listener) {
+        batteryListenerAddress = address;
+        batteryListener = listener;
+        if (batteryListener != null) {
+            startGetBattery();
+        } else {
+            stopGetBattery();
+        }
+    }
+
+    /**********************************************监听触发***************************************************/
     private String movementListenerAddress;
     private MovementListener movementListener;
+
+    private void handleMovementListen(String address, State state, String timeFormat) {
+        if (movementListener != null && address.equals(movementListenerAddress)) {
+            movementListener.onMovementReceived(state, timeFormat);
+        }
+    }
 
     @Override
     public void setMovementListener(@NonNull String address, @Nullable MovementListener listener) {
@@ -290,463 +385,102 @@ public class DeviceRepository implements DeviceSource {
         movementListener = listener;
     }
 
-    // 监听触发次数
+    /**********************************************监听触发次数***************************************************/
     private MovementCountChangeListener movementCountChangeListener;
+
+    private void handleMovementCountListen(String address, int count) {
+        if (movementCountChangeListener != null) {
+            movementCountChangeListener.onMovementCountChange(address, count);
+        }
+    }
 
     @Override
     public void setMovementCountChangeListener(@Nullable MovementCountChangeListener listener) {
         movementCountChangeListener = listener;
     }
 
-    // 监听连接状态
+    /**********************************************监听连接状态***************************************************/
     private DeviceConnectionChangeListener deviceConnectionChangeListener;
+
+    private void handleDeviceConnectionChangeListen(String address, boolean isConnected) {
+        if (deviceConnectionChangeListener != null) {
+            deviceConnectionChangeListener.onConnectionChange(address, isConnected);
+        }
+    }
 
     @Override
     public void setDeviceConnectionChangeListener(@Nullable DeviceConnectionChangeListener listener) {
         deviceConnectionChangeListener = listener;
     }
 
-    // 监听添加移除设备
+    /**********************************************监听添加移除设备***************************************************/
     private DeviceCountChangeListener deviceCountChangeListener;
+
+    private void handleDeviceCountChangeListen() {
+        if (deviceCountChangeListener != null) {
+            deviceCountChangeListener.onDeviceCountChange(new ArrayList<Device>(pairedDevices.values()));
+        }
+    }
 
     @Override
     public void setDeviceCountChangeListener(@Nullable DeviceCountChangeListener listener) {
         deviceCountChangeListener = listener;
     }
 
-    @Override
-    public void saveDevice(@NonNull Device device) {
-        Observable.just(device)
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {
-                        deviceDao.insertDevice(device);
-                    }
-                });
-    }
-
-    // 自动重连
-    private Disposable autoDisposable;
-
-    private void startAutoConnect() {
-        stopAutoConnect();
-        Log.d(TAG, "开始自动重连");
-        autoDisposable = Observable.interval(0, 20, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.newThread())
-                .map(new Function<Long, Boolean>() {
-                    @Override
-                    public Boolean apply(Long aLong) throws Exception {// 判断是否有未连接的设备
-                        Log.d(TAG, "正在检测 是否重连");
-                        for (Map.Entry<String, Device> entry : pairedDevices.entrySet()) {
-                            if (entry.getValue().connectionState == ConnectionType.DISCONNECTED) {
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
-                })
-                .subscribe(new Consumer<Boolean>() {
-                    @Override
-                    public void accept(Boolean aBoolean) throws Exception {
-                        if (aBoolean) {
-                            bleService.search(15);// 搜索后再重连
-                        }
-                    }
-                });
-    }
-
-    private void stopAutoConnect() {
-        Log.d(TAG, "停止自动重连");
-        if (autoDisposable != null && !autoDisposable.isDisposed()) {
-            autoDisposable.dispose();
-            autoDisposable = null;
-        }
-    }
-
-    @Override
-    public void getPairedDevices(@NonNull final GetPairedDevicesCallback callback) {
-        if (pairedDevices.size() == 0) {
-            Observable.create(new ObservableOnSubscribe<List<Device>>() {
-                @Override
-                public void subscribe(ObservableEmitter<List<Device>> emitter) throws Exception {
-                    List<Device> list = deviceDao.getPairedDevice();
-                    emitter.onNext(list);
-                    emitter.onComplete();
-                }
-            })
-                    .subscribeOn(Schedulers.io())
-                    .doOnNext(new Consumer<List<Device>>() {
-                        @Override
-                        public void accept(List<Device> devices) throws Exception {
-                            for (int i = 0; i < devices.size(); i++) {
-                                Device device = devices.get(i);
-                                device.currentState = stateDao.getLastState(device.address);
-                                State updateState = stateDao.getLastStateWithoutType(device.address, StateType.RESET);
-                                if (updateState != null) {
-                                    device.lastUpdateTime = updateState.time;
-                                } else {
-                                    device.lastUpdateTime = device.time;
-                                }
-                                pairedDevices.put(device.address, device);
-                            }
-                            startAutoConnect();
-                        }
-                    })
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Consumer<List<Device>>() {
-                        @Override
-                        public void accept(List<Device> devices) throws Exception {
-                            callback.onDevicesLoaded(devices);
-                        }
-                    });
-        } else {
-            List<Device> list = new ArrayList<>(pairedDevices.values());
-            callback.onDevicesLoaded(list);
-        }
-    }
-
-    @Override
-    public void enableMonitoring(@NonNull final String address, final boolean enable) {
-        Observable.just(pairedDevices.containsKey(address))
-                .map(new Function<Boolean, Device>() {
-                    @Override
-                    public Device apply(Boolean aBoolean) throws Exception {
-                        if (aBoolean) {
-                            return pairedDevices.get(address);
-                        }
-                        return deviceDao.getDeviceByAddress(address);
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {
-                        device.enableMonitoring = enable;
-                        deviceDao.insertDevice(device);
-                    }
-                });
-    }
-
-    @Override
-    public void setName(@NonNull final String address, @NonNull final String name) {
-        Observable.just(pairedDevices.containsKey(address))
-                .map(new Function<Boolean, Device>() {
-                    @Override
-                    public Device apply(Boolean aBoolean) throws Exception {
-                        if (aBoolean) {
-                            return pairedDevices.get(address);
-                        }
-                        return deviceDao.getDeviceByAddress(address);
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {
-                        device.name = name;
-                        deviceDao.insertDevice(device);
-                    }
-                });
-    }
-
-    @Override
-    public void setHeader(@NonNull final String address, @NonNull final Bitmap bitmap) {
-        Observable.just(pairedDevices.containsKey(address))
-                .map(new Function<Boolean, Device>() {
-                    @Override
-                    public Device apply(Boolean aBoolean) throws Exception {
-                        if (aBoolean) {
-                            return pairedDevices.get(address);
-                        }
-                        Device device = deviceDao.getDeviceByAddress(address);
-                        if (device == null) {
-                            device = new Device();
-                            device.address = address;
-                            return device;
-                        }
-                        return device;
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .doOnNext(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {// 删掉旧头像
-                        String prefix = device.address.replaceAll(":", "-");
-                        File[] files = getHeaderDir().listFiles();
-                        if (files != null) {
-                            for (int i = files.length - 1; i >= 0; i--) {
-                                String name = files[i].getName();
-                                if (name.startsWith(prefix) && files[i].exists() && files[i].isFile()) {
-                                    files[i].delete();
-                                }
-                            }
-                        }
-                    }
-                })
-                .doOnNext(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {// 保存新头像
-                        String prefix = device.address.replaceAll(":", "-");
-                        File file = new File(getHeaderDir(), prefix + System.currentTimeMillis() + ".jpg");
-                        String path = file.getAbsolutePath();
-                        BitmapUtil.saveBitmap(path, bitmap);
-                        device.imagePath = path;
-                    }
-                })
-                .subscribe(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {// 更新数据库和缓存
-                        deviceDao.insertDevice(device);
-                    }
-                });
-    }
-
-    private File getHeaderDir() {
-        File dir = new File("/mnt/sdcard/ViseeO/STOP AT-1/Header");
-        if (!dir.exists() || !dir.isDirectory()) {
-            dir.mkdirs();
-        }
-        return dir;
-    }
-
-    @Override
-    public void setTimeFormat(@NonNull final String address, @NonNull final String format) {
-        Observable.just(pairedDevices.containsKey(address))
-                .map(new Function<Boolean, Device>() {
-                    @Override
-                    public Device apply(Boolean aBoolean) throws Exception {
-                        if (aBoolean) {
-                            return pairedDevices.get(address);
-                        }
-                        return deviceDao.getDeviceByAddress(address);
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {
-                        device.timeFormat = format;
-                        deviceDao.insertDevice(device);
-                    }
-                });
-    }
-
-    @Override
-    public void setAlertTune(@NonNull final String address, final int alertTune) {
-        Observable.just(pairedDevices.containsKey(address))
-                .map(new Function<Boolean, Device>() {
-                    @Override
-                    public Device apply(Boolean aBoolean) throws Exception {
-                        if (aBoolean) {
-                            return pairedDevices.get(address);
-                        }
-                        return deviceDao.getDeviceByAddress(address);
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {
-                        if (alertTune != AlertTuneType.VIBRATION) {
-                            device.alertTune = alertTune;
-                            device.enableMonitoring = true;
-                        } else {
-                            device.enableMonitoring = false;
-                        }
-                        deviceDao.insertDevice(device);
-                    }
-                });
-    }
-
-    @Override
-    public void setNotification(@NonNull final String address, final int notificationType) {
-        Observable.just(pairedDevices.containsKey(address))
-                .map(new Function<Boolean, Device>() {
-                    @Override
-                    public Device apply(Boolean aBoolean) throws Exception {
-                        if (aBoolean) {
-                            return pairedDevices.get(address);
-                        }
-                        return deviceDao.getDeviceByAddress(address);
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<Device>() {
-                    @Override
-                    public void accept(Device device) throws Exception {
-                        device.notificationType = notificationType;
-                        deviceDao.insertDevice(device);
-                    }
-                });
-    }
-
-    @Override
-    public void reset(@NonNull final String address, final double latitude, final double longitude, @NonNull final ResetCallback callback) {
-        if (!bleService.isBleAvailable()) {
-            callback.onBleNotAvailable();
-            return;
-        }
-        if (pairedDevices.containsKey(address)) {
-            final Device device = pairedDevices.get(address);
-            if (!(device.connectionState == ConnectionType.CONNECTED)) {
-                callback.onDeviceDisconnected();
-                return;
-            }
-            if (device.currentState == null || device.currentState.type == StateType.RESET) {
-                callback.onAlreadyReset();
-                return;
-            }
-            State state = new State();
-            state.latitude = latitude;
-            state.longitude = longitude;
-            state.type = StateType.RESET;
-            state.address = address;
-            state.time = Calendar.getInstance().getTimeInMillis();
-            device.currentState = state;
-            device.movementsCount = 0;
-            Observable.just(state)
-                    .subscribeOn(Schedulers.io())
-                    .doOnNext(new Consumer<State>() {
-                        @Override
-                        public void accept(State state) throws Exception {
-                            stateDao.insertState(state);
-                        }
-                    })
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Observer<State>() {
-                        @Override
-                        public void onSubscribe(Disposable d) {
-                        }
-
-                        @Override
-                        public void onNext(State state) {
-                            callback.onSuccessful();
-                            if (movementListener != null && address.equals(movementListenerAddress)) {
-                                movementListener.onMovementReceived(state, device.timeFormat);
-                            }
-                            if (movementCountChangeListener != null) {
-                                movementCountChangeListener.onMovementCountChange(device.address, device.movementsCount);
-                            }
-                        }
-
-                        @Override
-                        public void onError(Throwable e) {
-                            callback.onError();
-                        }
-
-                        @Override
-                        public void onComplete() {
-                        }
-                    });
-            return;
-        }
-        callback.onDeviceNotAvailable();
-    }
-
-    private void handleBluetoothDisable() {
-        for (Map.Entry<String, Device> entry : pairedDevices.entrySet()) {
-            entry.getValue().connectionState = ConnectionType.DISCONNECTED;
-            if (deviceConnectionChangeListener != null) {
-                deviceConnectionChangeListener.onConnectionChange(entry.getKey(), false);
-            }
-        }
-    }
-
-    private void handleBluetoothEnable() {
-
-    }
+    /********************************************gatt已连接回调*****************************************************/
 
     private void handleGattConnected(String address) {
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
-            byte[] data = new byte[5];
-            data[0] = (byte) 0xb2;
-            data[1] = StringUtil.hexString2byte(device.pairId.substring(0, 2));
-            data[2] = StringUtil.hexString2byte(device.pairId.substring(2, 4));
-            data[3] = StringUtil.hexString2byte(device.pairId.substring(4, 6));
-            data[4] = StringUtil.hexString2byte(device.pairId.substring(6, 8));
-            bleService.write(address, data);// 连线
+            byte[] b2 = new byte[5];
+            b2[0] = (byte) 0xb2;
+            b2[1] = StringUtil.hexString2byte(device.pairId.substring(0, 2));
+            b2[2] = StringUtil.hexString2byte(device.pairId.substring(2, 4));
+            b2[3] = StringUtil.hexString2byte(device.pairId.substring(4, 6));
+            b2[4] = StringUtil.hexString2byte(device.pairId.substring(6, 8));
+            bleService.write(address, b2);// 连线
         } else {
             bleService.write(address, new byte[]{(byte) 0xb0});// 配对
         }
     }
 
+    /************************************************gatt断开连接回调*************************************************/
     private void handleGattDisconnected(String address) {
-        if (connectionCallback != null && address.equals(connectCallbackAddress)) {
-            connectionCallback.onDisconnected();
-            connectionCallback = null;
-            connectCallbackAddress = null;
-        }
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
-            Log.d(TAG, "lost connection + " + address);
             if (device.connectionState == ConnectionType.CONNECTED) {
                 notifications.sendLostConnectionNotification(device.name, Calendar.getInstance().getTimeInMillis(), device.timeFormat + "  " + TimeFormatType.TIME_DEFAULT);
             }
             device.connectionState = ConnectionType.DISCONNECTED;
         }
-        if (deviceConnectionChangeListener != null) {
-            deviceConnectionChangeListener.onConnectionChange(address, false);
-        }
     }
 
-    private void handleSearchDeviceFound(String address, String name, int rssi) {
-        if (searchCallback != null && !pairedDevices.containsKey(address) && name != null && name.startsWith("STOP")) {// 只返回STOP未配对的设备
-            Device foundDevice = new Device();
-            foundDevice.address = address;
-            foundDevice.name = name;
-            foundDevice.rssi = rssi;
-            searchCallback.onDeviceFound(foundDevice);
-        }
-        if (pairedDevices.containsKey(address)) {// 自动重连
-            Device device = pairedDevices.get(address);
-            if (device.connectionState == ConnectionType.DISCONNECTED) {
-                device.connectionState = ConnectionType.CONNECTING;
-                bleService.connect(address);
-                Log.d(TAG, "执行重连" + address);
-            }
-        }
-    }
-
-    private void handleSearchFinish() {
-        if (searchCallback != null) {
-            searchCallback.onFinish();
-            searchCallback = null;
-        }
-    }
-
+    /************************************************配对回调*************************************************/
     private byte[] pairIds = new byte[4];// 缓存pair id
 
     private void handleB0(String address, byte[] data) {
-        System.arraycopy(data, 4, pairIds, 0, pairIds.length);// 缓存id
+        System.arraycopy(data, 4, pairIds, 0, pairIds.length);// 拷贝
         byte[] b1 = new byte[5];
         b1[0] = (byte) 0xb1;
         System.arraycopy(pairIds, 0, b1, 1, 4);
         bleService.write(address, b1);// 确认配对
     }
 
+    /************************************************确认配对回调*************************************************/
     private void handleB1(String address, byte[] data) {
         if (data[4] == (byte) 0xaa) {// 成功
             byte[] b2 = new byte[5];
             b2[0] = (byte) 0xb2;
             System.arraycopy(pairIds, 0, b2, 1, 4);
             bleService.write(address, b2);// 连线
-        } else {// 失败
-            // todo 硬件会自动断开
+        } else {
+            // 失败 硬件会自动断开
         }
     }
 
-    private void handleB2(final String address, final byte[] data) {
+    /************************************************连线成功*************************************************/
+    private void handleB2(final String address) {
         Log.d(TAG, "b2连线成功" + address);
-        if (connectionCallback != null && address.equals(connectCallbackAddress)) {
-            connectionCallback.onConnected();
-            connectionCallback = null;
-            connectCallbackAddress = null;
-        }
-        if (deviceConnectionChangeListener != null) {
-            deviceConnectionChangeListener.onConnectionChange(address, true);
-        }
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
             device.connectionState = ConnectionType.CONNECTED;
@@ -760,28 +494,7 @@ public class DeviceRepository implements DeviceSource {
                         }
                     });
             notifications.sendConnectedNotification(device.name);
-            byte[] a4 = new byte[7];
-            a4[0] = (byte) 0xa4;// 设置mode
-            a4[1] = (byte) 0x0a;// 自动模式多久回报一次
-
-            // mode
-            a4[2] = (byte) 0x02;// 启动自摸模式
-            if (device.enableAlert) {
-                a4[2] |= (byte) 0x01;// 启动alert
-            }
-            if (device.enableG) {
-                a4[2] |= (byte) 0x04;// 启动g振动
-            }
-            if (device.enableXYZ) {
-                a4[2] |= (byte) 0x08;// 启动g振动
-            }
-
-            a4[3] = (byte) 0x01;// 更换过电池为0
-            a4[4] = device.gValue;// g灵敏度
-            a4[5] = device.xyzValue;// xyz灵敏度
-            a4[6] = (byte) 0x01;
-            bleService.write(device.address, a4);
-
+            bleService.write(device.address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ, false, device.gValue, device.xyzValue));
             bleService.write(address, new byte[]{(byte) 0xa0});// 发A0
         } else {
             Observable.just(pairIds)
@@ -838,9 +551,7 @@ public class DeviceRepository implements DeviceSource {
                         @Override
                         public void accept(Device device) throws Exception {// 新设备装进序列
                             pairedDevices.put(address, device);
-                            if (deviceCountChangeListener != null) {
-                                deviceCountChangeListener.onDeviceCountChange(new ArrayList<Device>(pairedDevices.values()));
-                            }
+                            handleDeviceCountChangeListen();
                             notifications.sendConnectedNotification(device.name);
                             bleService.write(device.address, new byte[]{(byte) 0xa0});// 发A0
                         }
@@ -848,29 +559,17 @@ public class DeviceRepository implements DeviceSource {
         }
     }
 
+    /************************************************连线失败*************************************************/
     private void handleEE(final String address, final byte[] data) {
         Log.d(TAG, "b2连接失败" + address);
-        if (connectionCallback != null && address.equals(connectCallbackAddress)) {// todo 硬件会自动断开gatt
-            connectionCallback.onDisconnected();
-            connectionCallback = null;
-            connectCallbackAddress = null;
-        }
-        if (pairedDevices.containsKey(address)) {
-            if (data[4] == (byte) 0x01) {// pair id 错误
-                final Device device = pairedDevices.get(address);
+        // 硬件会自动断开gatt
+        if (data[4] == (byte) 0x01) {// pair id 错误
+            if (pairedDevices.containsKey(address)) {
+                Device device = pairedDevices.get(address);
                 device.pairId = "";
-                Observable.just(1)
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(new Consumer<Integer>() {
-                            @Override
-                            public void accept(Integer integer) throws Exception {
-                                deviceDao.insertDevice(device);
-                            }
-                        });
+                saveDeviceToDatabase(device);
                 pairedDevices.remove(address);
-                if (deviceCountChangeListener != null) {
-                    deviceCountChangeListener.onDeviceCountChange(new ArrayList<Device>(pairedDevices.values()));
-                }
+                handleDeviceCountChangeListen();
             }
         }
     }
@@ -1036,9 +735,7 @@ public class DeviceRepository implements DeviceSource {
                             if (aBoolean) {
                                 if (pageIndex == (byte) 0xff) {
                                     device.historyData = null;
-                                    if (movementCountChangeListener != null) {
-                                        movementCountChangeListener.onMovementCountChange(device.address, device.movementsCount);
-                                    }
+                                    handleMovementCountListen(device.address, device.movementsCount);
                                 } else {
                                     byte indexH = historyData.indexH;
                                     byte indexL = historyData.indexL;
@@ -1053,9 +750,7 @@ public class DeviceRepository implements DeviceSource {
                                 }
                             } else {
                                 device.historyData = null;
-                                if (movementCountChangeListener != null) {
-                                    movementCountChangeListener.onMovementCountChange(device.address, device.movementsCount);
-                                }
+                                handleMovementCountListen(device.address, device.movementsCount);
                             }
                         }
 
@@ -1071,112 +766,9 @@ public class DeviceRepository implements DeviceSource {
         }
     }
 
-    private void handleA3(final String address, final byte[] data) {
-        if (batteryListener != null && address.equals(batteryListenerAddress)) {
-            int power;
-            if (data[4] > (byte) 0xdc) {
-                power = 100;
-            } else if (data[4] >= (byte) 0xc2) {
-                int temp = data[4] - (byte) 0xc2;
-                power = (int) (temp / 26f * 95) + 5;
-            } else {
-                power = 3;
-            }
-            batteryListener.onPowerReceived(power);
-            if (pairedDevices.containsKey(address)) {
-                Device device = pairedDevices.get(address);
-                int lastPower = device.battery;
-                if (power < 10 && power < lastPower) {
-                    notifications.sendLowPowerNotification();
-                }
-                device.battery = power;
-            }
-        }
-    }
-
     private void handleC0(final String address, final byte[] data) {
         bleService.write(address, new byte[]{(byte) 0xa2});// 立即清除此通知
         saveC0State(address, data, Calendar.getInstance().getTimeInMillis());
-    }
-
-    private void handleA4(final String address, final byte[] data) {
-        if (alertCallback != null) {
-            if (pairedDevices.containsKey(address)) {
-                Device device = pairedDevices.get(address);
-                device.enableAlert = tempEnableAlert;
-                Observable.just(device)
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(new Consumer<Device>() {
-                            @Override
-                            public void accept(Device device) throws Exception {
-                                deviceDao.insertDevice(device);
-                            }
-                        });
-            }
-            alertCallback.onSuccessful();
-            alertCallback = null;
-            stopAlertListener();
-        }
-        if (gxyzEnableCallback != null) {
-            if (pairedDevices.containsKey(address)) {
-                Device device = pairedDevices.get(address);
-                device.enableG = tempEnableG;
-                device.enableXYZ = tempEnableXYZ;
-                Observable.just(device)
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(new Consumer<Device>() {
-                            @Override
-                            public void accept(Device device) throws Exception {
-                                deviceDao.insertDevice(device);
-                            }
-                        });
-            }
-            gxyzEnableCallback.onSuccessful();
-            gxyzEnableCallback = null;
-            stopGXYZEnableListener();
-        }
-        if (gValueCallback != null) {
-            if (pairedDevices.containsKey(address)) {
-                Device device = pairedDevices.get(address);
-                device.gValue = tempGValue;
-                Observable.just(device)
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(new Consumer<Device>() {
-                            @Override
-                            public void accept(Device device) throws Exception {
-                                deviceDao.insertDevice(device);
-                            }
-                        });
-            }
-            gValueCallback.onSuccessful();
-            gValueCallback = null;
-            stopGValueListener();
-        }
-        if (xyzValueCallback != null) {
-            if (pairedDevices.containsKey(address)) {
-                Device device = pairedDevices.get(address);
-                device.xyzValue = tempXYZValue;
-                Observable.just(device)
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(new Consumer<Device>() {
-                            @Override
-                            public void accept(Device device) throws Exception {
-                                deviceDao.insertDevice(device);
-                            }
-                        });
-            }
-            xyzValueCallback.onSuccessful();
-            xyzValueCallback = null;
-            stopXYZValueListener();
-        }
-    }
-
-    private void handleAA(final String address, final byte[] data) {
-        if (findCallback != null) {
-            findCallback.onSuccessful();
-            findCallback = null;
-            stopFindListener();
-        }
     }
 
     // 以下需要service回调
@@ -1184,18 +776,23 @@ public class DeviceRepository implements DeviceSource {
     public void onBleEvent(final BleEvent event) {
         switch (event.type) {
             case BleEvent.BLUETOOTH_ADAPTER_DISABLE:// 蓝牙关闭
-                handleBluetoothDisable();
+                for (Map.Entry<String, Device> entry : pairedDevices.entrySet()) {// 所有设备断开连接
+                    entry.getValue().connectionState = ConnectionType.DISCONNECTED;
+                    handleDeviceConnectionChangeListen(entry.getKey(), false);
+                }
                 break;
             case BleEvent.BLUETOOTH_ADAPTER_ENABLE:// 蓝牙启用
-                handleBluetoothEnable();
                 break;
             case BleEvent.GATT_CONNECTED:// gatt已连接
                 handleGattConnected(event.address);
                 break;
             case BleEvent.GATT_DISCONNECTED:// gatt断开连接
+                handleConnectionDisconnected(event.address);// 主动连接时
                 handleGattDisconnected(event.address);
+                handleDeviceConnectionChangeListen(event.address, false);
                 break;
             case BleEvent.SEARCH_DEVICE_FOUND:// 发现设备
+                handleAutoReconnect(event.address);
                 handleSearchDeviceFound(event.address, event.name, event.rssi);
                 break;
             case BleEvent.SEARCH_FINISH:// 搜索结束
@@ -1211,7 +808,9 @@ public class DeviceRepository implements DeviceSource {
                     return;
                 }
                 if (event.value.length == 16 && event.value[3] == (byte) 0xb2) {// 连线成功反馈
-                    handleB2(event.address, event.value);
+                    handleDeviceConnectionChangeListen(event.address, true);
+                    handleB2(event.address);
+                    handleConnectionConnected(event.address);
                     return;
                 }
                 if (event.value.length == 6 && event.value[3] == (byte) 0xee) {// 连线失败反馈
@@ -1227,15 +826,28 @@ public class DeviceRepository implements DeviceSource {
                     return;
                 }
                 if (event.value.length == 6 && event.value[3] == (byte) 0xa3) {// A3反馈
-                    handleA3(event.address, event.value);
+                    int power;
+                    if (event.value[4] > (byte) 0xdc) {
+                        power = 100;
+                    } else if (event.value[4] >= (byte) 0xc2) {
+                        int temp = event.value[4] - (byte) 0xc2;
+                        power = (int) (temp / 26f * 95) + 5;
+                    } else {
+                        power = 3;
+                    }
+                    handleBatteryListen(event.address, power);
+                    handleA3(event.address, power);
                     return;
                 }
                 if (event.value.length == 16 && event.value[3] == (byte) 0xc0) {// C0反馈
                     handleC0(event.address, event.value);
                     return;
                 }
-                if (event.value.length == 10 && event.value[3] == (byte) 0xa4) {// A0反馈
-                    handleA4(event.address, event.value);
+                if (event.value.length == 10 && event.value[3] == (byte) 0xa4) {// A4反馈
+                    handleXYZSetting(event.address, event.value);
+                    handleGSetting(event.address, event.value);
+                    handleGXYZEnableSetting(event.address, event.value);
+                    handleAlertEnableSetting(event.address, event.value);
                     return;
                 }
                 if (event.value.length == 5 && event.value[3] == (byte) 0xaa) {// AA反馈（蜂鸣器）
@@ -1243,10 +855,31 @@ public class DeviceRepository implements DeviceSource {
                     return;
                 }
                 if (event.value.length == 5 && event.value[3] == (byte) 0xa8) {// A8反馈（解除配对 目前硬件不给回复）
-                    handleAA(event.address, event.value);
                     return;
                 }
                 break;
+        }
+    }
+
+    private void handleA3(String address, int power) {
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            int lastPower = device.battery;
+            if (power < 15 && (power < lastPower || lastPower == 0)) {
+                notifications.sendLowPowerNotification();
+            }
+            device.battery = power;
+        }
+    }
+
+    private void handleAutoReconnect(String address) {
+        if (pairedDevices.containsKey(address)) {// 自动重连
+            Device device = pairedDevices.get(address);
+            if (device.connectionState == ConnectionType.DISCONNECTED) {
+                device.connectionState = ConnectionType.CONNECTING;
+                bleService.connect(address);
+                Log.d(TAG, "搜索到设备 执行重连");
+            }
         }
     }
 
@@ -1318,15 +951,9 @@ public class DeviceRepository implements DeviceSource {
                             Device device = pairedDevices.get(address);
                             device.currentState = state;
                             device.lastUpdateTime = state.time;
-                            int count = device.movementsCount;
-                            count++;
-                            device.movementsCount = count;
-                            if (device.address.equals(movementListenerAddress) && movementListener != null) {
-                                movementListener.onMovementReceived(state, device.timeFormat);
-                            }
-                            if (movementCountChangeListener != null) {
-                                movementCountChangeListener.onMovementCountChange(address, device.movementsCount);
-                            }
+                            handleMovementListen(device.address, state, device.timeFormat);
+                            device.movementsCount++;
+                            handleMovementCountListen(address, device.movementsCount);
                         }
                         c0Semaphore.release();
                     }
@@ -1342,17 +969,219 @@ public class DeviceRepository implements DeviceSource {
                 });
     }
 
-    // search
+    /**********************************************保存是否通知带铃声****************************************************/
+    @Override
+    public void enableMonitoring(@NonNull String address, boolean enable) {
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            device.enableMonitoring = enable;
+            saveDeviceToDatabase(device);
+        }
+    }
+
+    /**********************************************保存名字****************************************************/
+    @Override
+    public void setName(@NonNull final String address, @NonNull final String name) {
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            device.name = name;
+            saveDeviceToDatabase(device);
+        } else {
+            Observable.just(1)
+                    .subscribeOn(Schedulers.io())
+                    .subscribe(new Observer<Integer>() {
+                        @Override
+                        public void onSubscribe(Disposable d) {
+                        }
+
+                        @Override
+                        public void onNext(Integer integer) {
+                            Device device = deviceDao.getDeviceByAddress(address);
+                            device.name = name;
+                            deviceDao.insertDevice(device);
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+                        }
+
+                        @Override
+                        public void onComplete() {
+                        }
+                    });
+        }
+    }
+
+    /**********************************************保存头像****************************************************/
+    @Override
+    public void setHeader(@NonNull final String address, @NonNull final Bitmap bitmap) {
+        Observable.just(pairedDevices.containsKey(address))
+                .map(new Function<Boolean, Device>() {
+                    @Override
+                    public Device apply(Boolean aBoolean) throws Exception {// 获取设备
+                        if (aBoolean) {
+                            return pairedDevices.get(address);
+                        }
+                        Device device = deviceDao.getDeviceByAddress(address);
+                        if (device == null) {
+                            device = new Device();
+                            device.address = address;
+                            return device;
+                        }
+                        return device;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .doOnNext(new Consumer<Device>() {
+                    @Override
+                    public void accept(Device device) throws Exception {// 删掉旧头像
+                        String prefix = device.address.replaceAll(":", "-");
+                        File[] files = getHeaderDir().listFiles();
+                        if (files != null) {
+                            for (int i = files.length - 1; i >= 0; i--) {
+                                String name = files[i].getName();
+                                if (name.startsWith(prefix) && files[i].exists() && files[i].isFile()) {
+                                    files[i].delete();
+                                }
+                            }
+                        }
+                    }
+                })
+                .doOnNext(new Consumer<Device>() {
+                    @Override
+                    public void accept(Device device) throws Exception {// 保存新头像
+                        String prefix = device.address.replaceAll(":", "-");
+                        File file = new File(getHeaderDir(), prefix + System.currentTimeMillis() + ".jpg");
+                        String path = file.getAbsolutePath();
+                        BitmapUtil.saveBitmap(path, bitmap);
+                        device.imagePath = path;
+                    }
+                })
+                .subscribe(new Observer<Device>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(Device device) {// 更新数据库
+                        deviceDao.insertDevice(device);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
+    }
+
+    private File getHeaderDir() {
+        File dir = new File("/mnt/sdcard/ViseeO/STOP AT-1/Header");
+        if (!dir.exists() || !dir.isDirectory()) {
+            dir.mkdirs();
+        }
+        return dir;
+    }
+
+    /**********************************************保存时间格式****************************************************/
+    @Override
+    public void setTimeFormat(@NonNull final String address, @NonNull final String format) {
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            device.timeFormat = format;
+            saveDeviceToDatabase(device);
+        }
+    }
+
+    /**********************************************保存铃声类型****************************************************/
+    @Override
+    public void setAlertTune(@NonNull final String address, final int alertTune) {
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            if (alertTune != AlertTuneType.VIBRATION) {
+                device.alertTune = alertTune;
+                device.enableMonitoring = true;
+            } else {
+                device.enableMonitoring = false;
+            }
+            saveDeviceToDatabase(device);
+        }
+    }
+
+    /**********************************************保存通知类型****************************************************/
+    @Override
+    public void setNotification(@NonNull final String address, final int notificationType) {
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            device.notificationType = notificationType;
+            saveDeviceToDatabase(device);
+        }
+    }
+
+    /**********************************************reset功能****************************************************/
+    @Override
+    public void reset(@NonNull final String address, final double latitude, final double longitude, @NonNull final ResetCallback callback) {
+        if (!bleService.isBleAvailable()) {
+            callback.onBleNotAvailable();
+            return;
+        }
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            if (!(device.connectionState == ConnectionType.CONNECTED)) {
+                callback.onDeviceDisconnected();
+                return;
+            }
+            if (device.currentState == null || device.currentState.type == StateType.RESET) {
+                callback.onAlreadyReset();
+                return;
+            }
+            State state = new State();
+            state.address = address;
+            state.type = StateType.RESET;
+            state.time = Calendar.getInstance().getTimeInMillis();
+            state.latitude = latitude;
+            state.longitude = longitude;
+            saveStateToDatabase(state);
+
+            device.currentState = state;
+            handleMovementListen(address, state, device.timeFormat);
+            device.movementsCount = 0;
+            handleMovementCountListen(device.address, device.movementsCount);
+            callback.onSuccessful();
+            return;
+        }
+        callback.onDeviceNotAvailable();
+    }
+
+    /**********************************************搜索功能****************************************************/
     private SearchCallback searchCallback;
+
+    private void handleSearchDeviceFound(String address, String name, int rssi) {
+        if (searchCallback != null && !pairedDevices.containsKey(address) && name != null && name.startsWith("STOP")) {// 只返回STOP未配对的设备
+            Device device = new Device();
+            device.address = address;
+            device.name = name;
+            device.rssi = rssi;
+            searchCallback.onDeviceFound(device);
+        }
+    }
+
+    private void handleSearchFinish() {
+        if (searchCallback != null) {
+            searchCallback.onFinish();
+            searchCallback = null;
+        }
+    }
 
     @Override
     public void search(int seconds, @NonNull final SearchCallback callback) {
-        searchCallback = callback;
         if (!bleService.isBleAvailable()) {
             searchCallback.onBleNotAvailable();
-            searchCallback = null;
             return;
         }
+        searchCallback = callback;
         bleService.search(seconds);
     }
 
@@ -1362,52 +1191,50 @@ public class DeviceRepository implements DeviceSource {
         bleService.stopSearch();
     }
 
-    // connect
+    /**********************************************主动连接****************************************************/
     private ConnectionCallback connectionCallback;
     private String connectCallbackAddress;
 
+    private void handleConnectionDisconnected(String address) {
+        if (connectionCallback != null && address.equals(connectCallbackAddress)) {
+            connectionCallback.onDisconnected();
+            connectionCallback = null;
+        }
+    }
+
+    private void handleConnectionConnected(String address) {
+        if (connectionCallback != null && address.equals(connectCallbackAddress)) {
+            connectionCallback.onConnected();
+            connectionCallback = null;
+        }
+    }
+
     @Override
     public void connect(@NonNull String address, @Nullable ConnectionCallback callback) {
-        connectCallbackAddress = address;
-        connectionCallback = callback;
         if (!bleService.isBleAvailable()) {
-            connectionCallback.onBleNotAvailable();
-            connectionCallback = null;
-            connectCallbackAddress = null;
+            callback.onBleNotAvailable();
             return;
         }
+        connectCallbackAddress = address;
+        connectionCallback = callback;
         bleService.connect(address);
     }
 
-    // find
+    /**********************************************find功能*************************************************** */
     private SettingCallback findCallback;
-    private Disposable findDisposable;
+    private OperateTimer findTimer;
+    private String tempFindAddress;
 
-    private void startFindListener() {
-        findDisposable = Observable.timer(3, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        if (findCallback != null) {
-                            findCallback.onTimeOut();
-                            findCallback = null;
-                        }
-                        stopFindListener();
-                    }
-                });
-    }
-
-    private void stopFindListener() {
-        if (findDisposable != null && !findDisposable.isDisposed()) {
-            findDisposable.dispose();
-            findDisposable = null;
+    private void handleAA(final String address, final byte[] data) {
+        if (findCallback != null && address.equals(tempFindAddress)) {
+            findTimer.stopCount();
+            findCallback.onSuccessful();
+            findCallback = null;
         }
     }
 
     @Override
-    public void find(@NonNull String address, @NonNull SettingCallback callback) {
+    public void find(@NonNull String address, @NonNull final SettingCallback callback) {
         if (!bleService.isBleAvailable()) {
             callback.onBleNotAvailable();
             return;
@@ -1418,45 +1245,46 @@ public class DeviceRepository implements DeviceSource {
                 callback.onDeviceDisconnected();
                 return;
             }
+            tempFindAddress = address;
             findCallback = callback;
             bleService.write(address, new byte[]{(byte) 0xaa});// 响铃
-            startFindListener();
+            findTimer = new OperateTimer(new OperateTimer.Callback() {
+                @Override
+                public void onTimeOut() {
+                    callback.onTimeOut();
+                }
+            });
+            findTimer.startCount();
             return;
         }
         callback.onDeviceNotAvailable();
     }
 
-    // enableAlert
-    private SettingCallback alertCallback;
-    private Disposable alertDisposable;
+    /**********************************************触发震动是否响*************************************************** */
+    private SettingCallback enableAlertCallback;
+    private OperateTimer enableAlertTimer;
     private boolean tempEnableAlert;
+    private String tempAlertEnableAddress;
 
-    private void startAlertListener() {
-        stopAlertListener();
-        alertDisposable = Observable.timer(3, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        if (alertCallback != null) {
-                            alertCallback.onTimeOut();
-                            alertCallback = null;
-                        }
-                        stopAlertListener();
-                    }
-                });
-    }
-
-    private void stopAlertListener() {
-        if (alertDisposable != null && !alertDisposable.isDisposed()) {
-            alertDisposable.dispose();
-            alertDisposable = null;
+    private void handleAlertEnableSetting(String address, byte[] data) {
+        if (enableAlertCallback != null && pairedDevices.containsKey(address) && address.equals(tempAlertEnableAddress)) {
+            enableAlertTimer.stopCount();
+            Device device = pairedDevices.get(address);
+            boolean enable = (data[5] & 0x01) == 0x01;
+            Log.d(TAG, "alert = " + enable);
+            device.enableAlert = enable;
+            saveDeviceToDatabase(device);
+            if (enable == tempEnableAlert) {
+                enableAlertCallback.onSuccessful();
+            } else {
+                enableAlertCallback.onFailed();
+            }
+            enableAlertCallback = null;
         }
     }
 
     @Override
-    public void enableAlert(@NonNull String address, boolean enable, @NonNull SettingCallback callback) {
+    public void enableAlert(@NonNull String address, boolean enable, @NonNull final SettingCallback callback) {
         if (!bleService.isBleAvailable()) {
             callback.onBleNotAvailable();
             return;
@@ -1467,88 +1295,58 @@ public class DeviceRepository implements DeviceSource {
                 callback.onDeviceDisconnected();
                 return;
             }
-            alertCallback = callback;
+            tempAlertEnableAddress = address;
+            enableAlertCallback = callback;
             tempEnableAlert = enable;
-            byte[] data = new byte[7];
-            data[0] = (byte) 0xa4;// 设置mode
-            data[1] = (byte) 0x0a;// 自动模式多久回报一次
-
-            // mode
-            data[2] = (byte) 0x02;// 启动自摸模式
-            if (enable) {
-                data[2] |= (byte) 0x01;// 启动alert
-            }
-            if (device.enableG) {
-                data[2] |= (byte) 0x04;// 启动g振动
-            }
-            if (device.enableXYZ) {
-                data[2] |= (byte) 0x08;// 启动g振动
-            }
-
-            data[3] = (byte) 0x01;// 更换过电池为0
-            data[4] = device.gValue;// g强度
-            data[5] = device.xyzValue;
-            data[6] = (byte) 0x01;
-            bleService.write(address, data);
-            startAlertListener();
+            bleService.write(address, getA4Data(enable, device.enableG, device.enableXYZ, false, device.gValue, device.xyzValue));
+            enableAlertTimer = new OperateTimer(new OperateTimer.Callback() {
+                @Override
+                public void onTimeOut() {
+                    callback.onTimeOut();
+                }
+            });
+            enableAlertTimer.startCount();
             return;
         }
         callback.onDeviceNotAvailable();
     }
 
-    // unpair
-    private SettingCallback unpairCallback;
-    private Disposable unpairDisposable;
-    private String tempUnpairAddress;
+    /**********************************************unpair*************************************************** */
+    private OperateTimer unpairTimer;
 
-    private void startUnpairListener() {
-        stopUnpairListener();
-        unpairDisposable = Observable.timer(3, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        if (unpairCallback != null) {
-                            // todo 硬件有bug unpair不回复
-//                            unpairCallback.onTimeOut();
-                            removeUnpairDevice(tempUnpairAddress, unpairCallback);
-                            unpairCallback = null;
-                        }
-                        stopUnpairListener();
-                    }
-                });
-    }
-
-    private void stopUnpairListener() {
-        if (unpairDisposable != null && !unpairDisposable.isDisposed()) {
-            unpairDisposable.dispose();
-            unpairDisposable = null;
-        }
-    }
-
-    private void removeUnpairDevice(String address, SettingCallback callback) {
-        bleService.disconnect(address);
-        Observable.just(address)
+    private void deleteDevice(final String address) {
+        Observable.just(1)
                 .subscribeOn(Schedulers.io())
-                .subscribe(new Consumer<String>() {
+                .subscribe(new Observer<Integer>() {
                     @Override
-                    public void accept(String s) throws Exception {
-                        deviceDao.deleteDeviceByAddress(s);
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(Integer integer) {
+                        deviceDao.deleteDeviceByAddress(address);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
                     }
                 });
         if (pairedDevices.containsKey(address)) {
             pairedDevices.remove(address);
-            callback.onSuccessful();
-        } else {
-            callback.onDeviceNotAvailable();
         }
+        handleDeviceCountChangeListen();
     }
 
     @Override
-    public void unpair(@NonNull String address, boolean force, @NonNull SettingCallback callback) {
+    public void unpair(@NonNull final String address, boolean force, @NonNull final SettingCallback callback) {
         if (force) {
-            removeUnpairDevice(address, callback);
+            bleService.write(address, new byte[]{(byte) 0xa8});// 取消配对
+            deleteDevice(address);
+            callback.onSuccessful();
             return;
         }
         if (!bleService.isBleAvailable()) {
@@ -1561,47 +1359,48 @@ public class DeviceRepository implements DeviceSource {
                 callback.onDeviceDisconnected();
                 return;
             }
-            unpairCallback = callback;
-            tempUnpairAddress = address;
             bleService.write(address, new byte[]{(byte) 0xa8});// 取消配对
-            startUnpairListener();
+            unpairTimer = new OperateTimer(new OperateTimer.Callback() {
+                @Override
+                public void onTimeOut() {
+                    deleteDevice(address);
+                    callback.onSuccessful();
+                }
+            });
+            unpairTimer.startCount();
             return;
         }
         callback.onDeviceNotAvailable();
     }
 
-    // enableG xyz
+    /**********************************************设置gxyz是否启用*************************************************** */
     private SettingCallback gxyzEnableCallback;
-    private Disposable gxyzEnableDisposable;
+    private OperateTimer gxyzEnableTimer;
     private boolean tempEnableG;
     private boolean tempEnableXYZ;
+    private String tempGXYZEnableAddress;
 
-    private void startGXYZEnableListener() {
-        stopGXYZEnableListener();
-        gxyzEnableDisposable = Observable.timer(3, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        if (gxyzEnableCallback != null) {
-                            gxyzEnableCallback.onTimeOut();
-                            gxyzEnableCallback = null;
-                        }
-                        stopGXYZEnableListener();
-                    }
-                });
-    }
-
-    private void stopGXYZEnableListener() {
-        if (gxyzEnableDisposable != null && !gxyzEnableDisposable.isDisposed()) {
-            gxyzEnableDisposable.dispose();
-            gxyzEnableDisposable = null;
+    private void handleGXYZEnableSetting(String address, byte[] data) {
+        if (gxyzEnableCallback != null && pairedDevices.containsKey(address) && address.equals(tempGXYZEnableAddress)) {
+            gxyzEnableTimer.stopCount();
+            Device device = pairedDevices.get(address);
+            boolean enableG = (data[5] >> 2 & 0x01) == 0x01;
+            boolean enableXYZ = (data[5] >> 3 & 0x01) == 0x01;
+            Log.d(TAG, "g = " + enableG + " xyz = " + enableXYZ);
+            device.enableG = enableG;
+            device.enableXYZ = enableXYZ;
+            saveDeviceToDatabase(device);
+            if (enableG == tempEnableG && enableXYZ == tempEnableXYZ) {
+                gxyzEnableCallback.onSuccessful();
+            } else {
+                gxyzEnableCallback.onFailed();
+            }
+            gxyzEnableCallback = null;
         }
     }
 
     @Override
-    public void enableGAndXYZ(@NonNull String address, boolean enableG, boolean enableXYZ, @NonNull SettingCallback callback) {
+    public void enableGAndXYZ(@NonNull String address, boolean enableG, boolean enableXYZ, @NonNull final SettingCallback callback) {
         if (!bleService.isBleAvailable()) {
             callback.onBleNotAvailable();
             return;
@@ -1612,185 +1411,193 @@ public class DeviceRepository implements DeviceSource {
                 callback.onDeviceDisconnected();
                 return;
             }
+            tempGXYZEnableAddress = address;
             gxyzEnableCallback = callback;
             tempEnableG = enableG;
             tempEnableXYZ = enableXYZ;
-            byte[] data = new byte[7];
-            data[0] = (byte) 0xa4;// 设置mode
-            data[1] = (byte) 0x0a;// 自动模式多久回报一次
-
-            // mode
-            data[2] = (byte) 0x02;// 启动自摸模式
-            if (device.enableAlert) {
-                data[2] |= (byte) 0x01;// 启动alert
-            }
-            if (enableG) {
-                data[2] |= (byte) 0x04;// 启动g振动
-            }
-            if (enableXYZ) {
-                data[2] |= (byte) 0x08;// 启动g振动
-            }
-
-            data[3] = (byte) 0x01;// 更换过电池为0
-            data[4] = device.gValue;// g灵敏度
-            data[5] = device.xyzValue;// xyz灵敏度
-            data[6] = (byte) 0x01;
-            bleService.write(address, data);
-            startGXYZEnableListener();
+            bleService.write(address, getA4Data(device.enableAlert, enableG, enableXYZ, false, device.gValue, device.xyzValue));
+            gxyzEnableTimer = new OperateTimer(new OperateTimer.Callback() {
+                @Override
+                public void onTimeOut() {
+                    callback.onTimeOut();
+                }
+            });
+            gxyzEnableTimer.startCount();
             return;
         }
         callback.onDeviceNotAvailable();
     }
 
-    // g value
+    /**********************************************设置g灵敏度*************************************************** */
     private SettingCallback gValueCallback;
-    private Disposable gValueDisposable;
+    private OperateTimer gValueTimer;
     private byte tempGValue;
+    private String tempGValueAddress;
 
-    private void startGValueListener() {
-        stopGValueListener();
-        gValueDisposable = Observable.timer(3, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        if (gValueCallback != null) {
-                            gValueCallback.onTimeOut();
-                            gValueCallback = null;
-                        }
-                        stopGValueListener();
-                    }
-                });
-    }
-
-    private void stopGValueListener() {
-        if (gValueDisposable != null && !gValueDisposable.isDisposed()) {
-            gValueDisposable.dispose();
-            gValueDisposable = null;
+    private void handleGSetting(String address, byte[] data) {
+        if (gValueCallback != null && pairedDevices.containsKey(address) && address.equals(tempGValueAddress)) {
+            gValueTimer.stopCount();
+            Device device = pairedDevices.get(address);
+            device.gValue = data[6];
+            Log.d(TAG, "g = " + (data[6] & 0xff));
+            saveDeviceToDatabase(device);
+            if (data[6] == tempGValue) {
+                gValueCallback.onSuccessful();
+            } else {
+                gValueCallback.onFailed();
+            }
+            gValueCallback = null;
         }
     }
 
     @Override
-    public void setG(@NonNull String address, byte g, @Nullable SettingCallback callback) {
+    public void setG(@NonNull String address, byte g, @NonNull final SettingCallback callback) {
         if (!bleService.isBleAvailable()) {
-            if (callback != null) {
-                callback.onBleNotAvailable();
-            }
+            callback.onBleNotAvailable();
             return;
         }
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
             if (!(device.connectionState == ConnectionType.CONNECTED)) {
-                if (callback != null) {
-                    callback.onDeviceDisconnected();
-                }
+                callback.onDeviceDisconnected();
                 return;
             }
+            tempGValueAddress = address;
             gValueCallback = callback;
             tempGValue = g;
-            byte[] data = new byte[7];
-            data[0] = (byte) 0xa4;// 设置mode
-            data[1] = (byte) 0x0a;// 自动模式多久回报一次
-
-            // mode
-            data[2] = (byte) 0x02;// 启动自摸模式
-            if (device.enableAlert) {
-                data[2] |= (byte) 0x01;// 启动alert
-            }
-            if (device.enableG) {
-                data[2] |= (byte) 0x04;// 启动g振动
-            }
-            if (device.enableXYZ) {
-                data[2] |= (byte) 0x08;// 启动g振动
-            }
-
-            data[3] = (byte) 0x01;// 更换过电池为0
-            data[4] = g;// g灵敏度
-            data[5] = device.xyzValue;// xyz灵敏度
-            data[6] = (byte) 0x01;
-            bleService.write(address, data);
-            startGValueListener();
+            bleService.write(address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ, false, g, device.xyzValue));
+            gValueTimer = new OperateTimer(new OperateTimer.Callback() {
+                @Override
+                public void onTimeOut() {
+                    callback.onTimeOut();
+                }
+            });
+            gValueTimer.startCount();
             return;
         }
-        if (callback != null) {
-            callback.onDeviceNotAvailable();
-        }
+        callback.onDeviceNotAvailable();
     }
 
-    // xyz value
+    /**********************************************设置xyz灵敏度*************************************************** */
     private SettingCallback xyzValueCallback;
-    private Disposable xyzValueDisposable;
+    private OperateTimer xyzValueTimer;
     private byte tempXYZValue;
+    private String tempXYZValueAddress;
 
-    private void startXYZValueListener() {
-        stopXYZValueListener();
-        xyzValueDisposable = Observable.timer(3, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.newThread())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        if (xyzValueCallback != null) {
-                            xyzValueCallback.onTimeOut();
-                            xyzValueCallback = null;
-                        }
-                        stopXYZValueListener();
-                    }
-                });
-    }
-
-    private void stopXYZValueListener() {
-        if (xyzValueDisposable != null && !xyzValueDisposable.isDisposed()) {
-            xyzValueDisposable.dispose();
-            xyzValueDisposable = null;
+    private void handleXYZSetting(String address, byte[] data) {
+        if (xyzValueCallback != null && pairedDevices.containsKey(address) && address.equals(tempXYZValueAddress)) {
+            xyzValueTimer.stopCount();
+            Device device = pairedDevices.get(address);
+            device.xyzValue = data[7];
+            Log.d(TAG, "xyz = " + (data[7] & 0xff));
+            saveDeviceToDatabase(device);
+            if (data[7] == tempXYZValue) {
+                xyzValueCallback.onSuccessful();
+            } else {
+                xyzValueCallback.onFailed();
+            }
+            xyzValueCallback = null;
         }
     }
 
     @Override
-    public void setXYZ(@NonNull String address, byte xyz, @Nullable SettingCallback callback) {
+    public void setXYZ(@NonNull String address, byte xyz, @NonNull final SettingCallback callback) {
         if (!bleService.isBleAvailable()) {
-            if (callback != null) {
-                callback.onBleNotAvailable();
-            }
+            callback.onBleNotAvailable();
             return;
         }
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
             if (!(device.connectionState == ConnectionType.CONNECTED)) {
-                if (callback != null) {
-                    callback.onDeviceDisconnected();
-                }
+                callback.onDeviceDisconnected();
                 return;
             }
+            tempXYZValueAddress = address;
             xyzValueCallback = callback;
             tempXYZValue = xyz;
-            byte[] data = new byte[7];
-            data[0] = (byte) 0xa4;// 设置mode
-            data[1] = (byte) 0x0a;// 自动模式多久回报一次
-
-            // mode
-            data[2] = (byte) 0x02;// 启动自摸模式
-            if (device.enableAlert) {
-                data[2] |= (byte) 0x01;// 启动alert
-            }
-            if (device.enableG) {
-                data[2] |= (byte) 0x04;// 启动g振动
-            }
-            if (device.enableXYZ) {
-                data[2] |= (byte) 0x08;// 启动g振动
-            }
-
-            data[3] = (byte) 0x01;// 更换过电池为0
-            data[4] = device.gValue;// g灵敏度
-            data[5] = xyz;// xyz灵敏度
-            data[6] = (byte) 0x01;
-            bleService.write(address, data);
-            startXYZValueListener();
+            bleService.write(address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ, false, device.gValue, xyz));
+            xyzValueTimer = new OperateTimer(new OperateTimer.Callback() {
+                @Override
+                public void onTimeOut() {
+                    callback.onTimeOut();
+                }
+            });
+            xyzValueTimer.startCount();
             return;
         }
-        if (callback != null) {
-            callback.onDeviceNotAvailable();
+        callback.onDeviceNotAvailable();
+    }
+
+    // 获取setmode数据
+    private byte[] getA4Data(boolean enableAlert, boolean enableG, boolean enableXYZ, boolean changeBattery, byte g, byte xyz) {
+        byte[] a4 = new byte[7];
+        a4[0] = (byte) 0xa4;// 设置mode
+        a4[1] = (byte) 0x0a;// 自动模式多久回报一次
+
+        // mode
+        a4[2] = (byte) 0x02;// 启动自摸模式
+        if (enableAlert) {
+            a4[2] |= (byte) 0x01;// 启动alert
         }
+        if (enableG) {
+            a4[2] |= (byte) 0x04;// 启动g振动
+        }
+        if (enableXYZ) {
+            a4[2] |= (byte) 0x08;// 启动g振动
+        }
+
+        a4[3] = changeBattery ? (byte) 0x00 : (byte) 0x01;// 更换过电池为0
+        a4[4] = g;// g灵敏度
+        a4[5] = xyz;// xyz灵敏度
+        a4[6] = (byte) 0x01;
+        return a4;
+    }
+
+    // 保存设备
+    private void saveDeviceToDatabase(final Device device) {
+        Observable.just(1)
+                .subscribeOn(Schedulers.io())
+                .subscribe(new Observer<Integer>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(Integer integer) {
+                        deviceDao.insertDevice(device);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
+    }
+
+    // 保存状态
+    private void saveStateToDatabase(final State state) {
+        Observable.just(1)
+                .subscribeOn(Schedulers.io())
+                .subscribe(new Observer<Integer>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(Integer integer) {
+                        stateDao.insertState(state);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
     }
 }

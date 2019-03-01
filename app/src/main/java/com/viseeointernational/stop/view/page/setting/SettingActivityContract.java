@@ -106,6 +106,8 @@ public interface SettingActivityContract {
 
         void download();
 
+        void saveTempEnableGAndEYZ(boolean enableG, boolean enableXYZ);
+
         void enableGAndXYZ(boolean enableG, boolean enableXYZ);
 
         void saveG(int g);

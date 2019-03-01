@@ -134,13 +134,6 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
                     checkDevice(address);
                 }
             }
-
-            @Override
-            public void onBleNotAvailable() {
-                if (view != null) {
-                    view.showEnableBluetooth();
-                }
-            }
         });
     }
 
@@ -334,13 +327,6 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
             public void onAlreadyReset() {
                 if (view != null) {
                     view.showMessage(R.string.msg_already_reset);
-                }
-            }
-
-            @Override
-            public void onError() {
-                if (view != null) {
-                    view.showMessage(R.string.msg_failed);
                 }
             }
         });

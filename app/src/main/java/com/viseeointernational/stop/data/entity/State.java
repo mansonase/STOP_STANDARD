@@ -9,14 +9,13 @@ public class State {
     @PrimaryKey(autoGenerate = true)
     public long id;
 
-    public int type;// 动作
+    public int type;// 类型
 
     public String address;// 物理地址
 
     public int movementsCount;// 触发次数
 
-    // 硬件每笔数据的索引 用来查历史记录
-    public byte indexH;
+    public byte indexH;// 硬件每笔数据的索引 用来查历史记录
 
     public byte indexL;
 

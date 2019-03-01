@@ -258,6 +258,7 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
                     presenter.enableAlert(isChecked);
                     break;
                 case R.id.g_switch:
+                    presenter.saveTempEnableGAndEYZ(!gSwitch.isChecked(), xyzSwitch.isChecked());
                     if (!isChecked && !xyzSwitch.isChecked()) {
                         showXYZEnable(true);
                         presenter.enableGAndXYZ(false, true);
@@ -266,6 +267,7 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
                     }
                     break;
                 case R.id.xyz_switch:
+                    presenter.saveTempEnableGAndEYZ(gSwitch.isChecked(), !xyzSwitch.isChecked());
                     if (!isChecked && !gSwitch.isChecked()) {
                         showGEnable(true);
                         presenter.enableGAndXYZ(true, false);

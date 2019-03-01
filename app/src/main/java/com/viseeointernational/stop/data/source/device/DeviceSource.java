@@ -15,6 +15,9 @@ public interface DeviceSource {
 
     void onAppExit();
 
+    /**********************************************添加获取设备***************************************************/
+    void saveDevice(@NonNull Device device);
+
     interface GetDeviceCallback {
 
         void onDeviceLoaded(Device device);
@@ -24,6 +27,13 @@ public interface DeviceSource {
 
     void getDevice(@NonNull String address, @NonNull GetDeviceCallback callback);
 
+    interface GetPairedDevicesCallback {
+
+        void onDevicesLoaded(List<Device> devices);
+    }
+
+    void getPairedDevices(@NonNull GetPairedDevicesCallback callback);
+
     interface GetPairedDeviceCountCallback {
 
         void onCountLoaded(int count);
@@ -31,6 +41,7 @@ public interface DeviceSource {
 
     void getPairedDeviceCount(@NonNull GetPairedDeviceCountCallback callback);
 
+    /**********************************************获取状态***************************************************/
     interface GetStatesContainTimeFormatCallback {
 
         void onStatesLoaded(List<State> states, String timeFormat);
@@ -48,19 +59,12 @@ public interface DeviceSource {
     interface GetResetStatesDescCallback {
 
         void onStatesLoaded(List<State> states);
+
     }
 
     void getResetStatesDesc(@NonNull String address, long from, long to, @NonNull GetResetStatesDescCallback callback);
 
-    interface GetPairedDevicesCallback {
-
-        void onDevicesLoaded(List<Device> devices);
-
-        void onBleNotAvailable();
-    }
-
-    void getPairedDevices(@NonNull GetPairedDevicesCallback callback);
-
+    /**********************************************监听功能***************************************************/
     interface BatteryListener {
 
         void onPowerReceived(int power);
@@ -96,8 +100,7 @@ public interface DeviceSource {
 
     void setDeviceCountChangeListener(@Nullable DeviceCountChangeListener listener);
 
-    void saveDevice(@NonNull Device device);
-
+    /**********************************************不需要ble回调的功能***************************************************/
     void enableMonitoring(@NonNull String address, boolean enable);
 
     void setName(@NonNull String address, @NonNull String name);
@@ -116,8 +119,6 @@ public interface DeviceSource {
 
         void onAlreadyReset();
 
-        void onError();
-
         void onBleNotAvailable();
 
         void onDeviceDisconnected();
@@ -127,6 +128,7 @@ public interface DeviceSource {
 
     void reset(@NonNull String address, double latitude, double longitude, @NonNull ResetCallback callback);
 
+    /**********************************************需要ble回调的功能***************************************************/
     interface SearchCallback {
 
         void onBleNotAvailable();
@@ -140,6 +142,7 @@ public interface DeviceSource {
 
     void stopSearch();
 
+
     interface ConnectionCallback {
 
         void onBleNotAvailable();
@@ -151,9 +154,12 @@ public interface DeviceSource {
 
     void connect(@NonNull String address, @Nullable ConnectionCallback callback);
 
+
     interface SettingCallback {
 
         void onSuccessful();
+
+        void onFailed();
 
         void onTimeOut();
 
@@ -172,7 +178,7 @@ public interface DeviceSource {
 
     void enableGAndXYZ(@NonNull String address, boolean enableG, boolean enableXYZ, @NonNull SettingCallback callback);
 
-    void setG(@NonNull String address, byte g, @Nullable SettingCallback callback);
+    void setG(@NonNull String address, byte g, @NonNull SettingCallback callback);
 
-    void setXYZ(@NonNull String address, byte xyz, @Nullable SettingCallback callback);
+    void setXYZ(@NonNull String address, byte xyz, @NonNull SettingCallback callback);
 }
