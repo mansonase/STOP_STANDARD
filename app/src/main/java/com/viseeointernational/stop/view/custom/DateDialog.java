@@ -78,11 +78,11 @@ public class DateDialog extends Dialog {
         calendar.setTimeInMillis(showTime);
         year = calendar.get(Calendar.YEAR);
         month = calendar.get(Calendar.MONTH);
-        title.setText(TimeUtil.getEnglishMonth(month) + "  " + year);
         setYearAndMonth(year, month);
     }
 
     private void setYearAndMonth(int year, int month) {
+        title.setText(TimeUtil.getEnglishMonth(month) + "  " + year);
         Calendar calendar = Calendar.getInstance();
         calendar.set(year, month, 1);
         int datas[][] = new int[6][7];

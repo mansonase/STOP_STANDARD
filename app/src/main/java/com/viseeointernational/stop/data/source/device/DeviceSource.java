@@ -59,7 +59,6 @@ public interface DeviceSource {
     interface GetResetStatesDescCallback {
 
         void onStatesLoaded(List<State> states);
-
     }
 
     void getResetStatesDesc(@NonNull String address, long from, long to, @NonNull GetResetStatesDescCallback callback);

@@ -7,6 +7,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.viseeointernational.stop.R;
 import com.viseeointernational.stop.data.constant.AlertTuneType;
@@ -569,6 +570,8 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
         if (view != null) {
             view.showLoading();
         }
+        Log.d(TAG, "start = " + TimeUtil.getTime(startTime, TimeFormatType.DATE_1_1 + "  " + TimeFormatType.TIME_DEFAULT) +
+        "end = " + TimeUtil.getTime(endTime, TimeFormatType.DATE_1_1 + "  " + TimeFormatType.TIME_DEFAULT));
         deviceSource.getStatesContainTimeFormat(address, startTime, endTime, new DeviceSource.GetStatesContainTimeFormatCallback() {
             @Override
             public void onStatesLoaded(List<State> states, String timeFormat) {
