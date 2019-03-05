@@ -32,8 +32,6 @@ public class ConnectFragmentPresenter implements ConnectFragmentContract.Present
 
     private ConnectFragmentContract.View view;
 
-    private int reconnectCount;
-
     @Inject
     @Nullable
     String address;
@@ -139,7 +137,6 @@ public class ConnectFragmentPresenter implements ConnectFragmentContract.Present
             return;
         }
         deviceSource.setName(address, name);
-        reconnectCount = 3;
         if (view != null) {
             view.showLoading();
         }
@@ -168,12 +165,6 @@ public class ConnectFragmentPresenter implements ConnectFragmentContract.Present
 
             @Override
             public void onDisconnected() {
-                reconnectCount--;
-                Log.d(TAG, "onDisconnected " + reconnectCount);
-                if (reconnectCount > 0) {
-                    reconnect();
-                    return;
-                }
                 if (view != null) {
                     view.cancelLoading();
                     view.alertIfReconnect();
@@ -182,13 +173,4 @@ public class ConnectFragmentPresenter implements ConnectFragmentContract.Present
         });
     }
 
-    private void reconnect() {
-        Observable.timer(3, TimeUnit.SECONDS)
-                .subscribe(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        doConnect();
-                    }
-                });
-    }
 }

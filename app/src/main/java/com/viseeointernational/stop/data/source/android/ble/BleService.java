@@ -70,6 +70,7 @@ public class BleService extends Service {
         }
     };
 
+    private int reconnectCount;
 
     @Override
     public void onCreate() {
@@ -201,12 +202,15 @@ public class BleService extends Service {
                 });
     }
 
-    public void connect(String address) {
+    public void connect(String address, boolean reconnect) {
         if (connectedDevice.containsKey(address)) {
             return;
         }
         BluetoothAdapter adapter = getAdapter();
         if (adapter != null) {
+            if(reconnect){
+                reconnectCount = 3;
+            }
             Log.d(TAG, "正在连接 " + address);
             BluetoothDevice device = adapter.getRemoteDevice(address);
             device.connectGatt(this, false, bluetoothGattCallback);
@@ -251,8 +255,15 @@ public class BleService extends Service {
                 String address = gatt.getDevice().getAddress();
                 gatt.close();
                 if (!connectedDevice.containsKey(address)) {// 正在连接的设备要重连
-                    Log.d(TAG, "正在重连 " + address);
-                    connect(address);
+                    if (reconnectCount > 0) {
+                        reconnectCount--;
+                        Log.d(TAG, "正在重连 " + address);
+                        connect(address, false);
+                    } else {
+                        Log.d(TAG, "连接失败 " + address);
+                        releaseDevice(address);
+                        sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0, null);
+                    }
                 } else {// 已连接的设备断开连接
                     Log.d(TAG, "连接失败 " + address);
                     releaseDevice(address);

@@ -19,9 +19,16 @@ import com.viseeointernational.stop.view.page.main.MainActivity;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 
 @Singleton
 public class Notifications {
@@ -29,8 +36,8 @@ public class Notifications {
     private static final String TAG = Notifications.class.getSimpleName();
 
     public static final int NOTIFICATION_ID_FOREGROUND = 1;
-    private static final int NOTIFICATION_ID_MSG = 2;
-    private static final int NOTIFICATION_ID_MOVEMENTS_START = 3;
+    private static final int NOTIFICATION_ID_MSG_START = 10;
+    private static final int NOTIFICATION_ID_MOVEMENTS_START = 20;
 
     public static final String CHANNEL_ID_FOREGROUND = "1";
     private static final String CHANNEL_ID_MSG = "2";
@@ -39,42 +46,48 @@ public class Notifications {
     private Context context;
     private NotificationManager notificationManager;
 
-    private Map<String, Integer> MovementsNotificationIds = new HashMap<>();
+    private Map<String, Integer> msgNotificationIds = new HashMap<>();
+    private int lastMsgNotificationId = NOTIFICATION_ID_MSG_START;
+
+    private Map<String, Integer> movementsNotificationIds = new HashMap<>();
     private int lastMovementsNotificationId = NOTIFICATION_ID_MOVEMENTS_START;
+
+    private NotificationData notificationData = new NotificationData();
 
     @Inject
     public Notifications(Context context) {
         this.context = context;
         notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        startAutoSend();
     }
 
-    public Notification getForegroundNotification() {
-        Notification.Builder builder = new Notification.Builder(context);
-        if (Build.VERSION.SDK_INT >= 26) {
-            NotificationChannel channel = notificationManager.getNotificationChannel(CHANNEL_ID_FOREGROUND);
-            if (channel == null) {
-                channel = new NotificationChannel(CHANNEL_ID_FOREGROUND, context.getText(R.string.channel_ble_service), NotificationManager.IMPORTANCE_NONE);
-                channel.enableLights(false);
-                channel.enableVibration(false);
-                channel.setSound(null, Notification.AUDIO_ATTRIBUTES_DEFAULT);
-                notificationManager.createNotificationChannel(channel);
-            }
-            builder.setChannelId(CHANNEL_ID_FOREGROUND);
+    private Disposable disposable;
+
+    private void startAutoSend() {
+        stopAutoSend();
+        disposable = Observable.interval(0, 1000, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<Long>() {
+                    @Override
+                    public void accept(Long aLong) throws Exception {
+                        if (notificationData.size() > 0) {
+                            NotificationData.Content content = notificationData.get(0);
+                            notificationData.remove(0);
+                            notificationManager.notify(content.notificationId, content.notification);
+                        }
+                    }
+                });
+    }
+
+    public void stopAutoSend() {
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
+            disposable = null;
         }
-        builder.setSmallIcon(R.mipmap.ic_launcher);
-        builder.setContentTitle(context.getText(R.string.app_name));
-        builder.setContentText(context.getText(R.string.running));
-        builder.setLights(Color.GREEN, 0, 0);
-        builder.setVibrate(null);
-        builder.setSound(null);
-        builder.setAutoCancel(true);
-        Intent intent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, -1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        builder.setContentIntent(pendingIntent);
-        return builder.build();
     }
 
-    private void sendMsgNotification(CharSequence text) {
+    private void sendMsgNotification(String deviceId, CharSequence text) {
         Notification.Builder builder = new Notification.Builder(context);
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel channel = notificationManager.getNotificationChannel(CHANNEL_ID_MSG);
@@ -88,31 +101,40 @@ public class Notifications {
         builder.setSmallIcon(R.mipmap.ic_launcher);
         builder.setContentTitle(context.getText(R.string.app_name));
         builder.setContentText(text);
-//        builder.setAutoCancel(true);
+        builder.setAutoCancel(true);
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, -1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(pendingIntent);
-        notificationManager.notify(NOTIFICATION_ID_MSG, builder.build());
+
+        int notificationId;
+        if (msgNotificationIds.containsKey(deviceId)) {
+            notificationId = msgNotificationIds.get(deviceId);
+        } else {
+            notificationId = lastMsgNotificationId;
+            msgNotificationIds.put(deviceId, lastMsgNotificationId);
+            lastMsgNotificationId++;
+        }
+        notificationManager.notify(notificationId, builder.build());
     }
 
-    public void sendChangeNewBatteryNotification(String name) {
-        sendMsgNotification(name + " " + context.getText(R.string.notification_reconnect_low_power));
+    public void sendChangeNewBatteryNotification(String deviceId, String name) {
+        sendMsgNotification(deviceId, name + " " + context.getText(R.string.notification_reconnect_low_power));
     }
 
     public void sendNoDeviceFoundNotification() {
-        sendMsgNotification(context.getText(R.string.notification_no_device));
+        sendMsgNotification("10", context.getText(R.string.notification_no_device));
     }
 
-    public void sendLostConnectionNotification(String name, long time, String format) {
-        sendMsgNotification(name + " " + context.getText(R.string.notification_lost_connection) + " " + TimeUtil.getTime(time, format));
+    public void sendLostConnectionNotification(String deviceId, String name, long time, String format) {
+        sendMsgNotification(deviceId, name + " " + context.getText(R.string.notification_lost_connection) + " " + TimeUtil.getTime(time, format));
     }
 
-    public void sendConnectedNotification(String name) {
-        sendMsgNotification(name + " " + context.getText(R.string.notification_connected));
+    public void sendConnectedNotification(String deviceId, String name) {
+        sendMsgNotification(deviceId, name + " " + context.getText(R.string.notification_connected));
     }
 
-    public void sendLowPowerNotification() {
-        sendMsgNotification(context.getText(R.string.notification_low_power));
+    public void sendLowPowerNotification(String deviceId, String name) {
+        sendMsgNotification(deviceId, name + " " + context.getText(R.string.notification_low_power));
     }
 
     /**
@@ -143,14 +165,17 @@ public class Notifications {
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         builder.setContentIntent(pendingIntent);
         int notificationId;
-        if (MovementsNotificationIds.containsKey(deviceId)) {
-            notificationId = MovementsNotificationIds.get(deviceId);
+        if (movementsNotificationIds.containsKey(deviceId)) {
+            notificationId = movementsNotificationIds.get(deviceId);
         } else {
             notificationId = lastMovementsNotificationId;
-            MovementsNotificationIds.put(deviceId, lastMovementsNotificationId);
+            movementsNotificationIds.put(deviceId, lastMovementsNotificationId);
             lastMovementsNotificationId++;
         }
-        notificationManager.notify(notificationId, builder.build());
+        NotificationData.Content content = new NotificationData.Content();
+        content.notificationId = notificationId;
+        content.notification = builder.build();
+        notificationData.add(content);
     }
 
     @SuppressLint("NewApi")

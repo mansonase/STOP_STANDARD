@@ -114,6 +114,7 @@ public class DeviceRepository implements DeviceSource {
     public void onAppExit() {
         if (pairedDevices.size() == 0 || !bleService.isBleAvailable()) {
             EventBus.getDefault().unregister(this);
+            notifications.stopAutoSend();
             stopAutoConnect();
             bleService.stopSelf();
         }
@@ -449,7 +450,7 @@ public class DeviceRepository implements DeviceSource {
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
             if (device.connectionState == ConnectionType.CONNECTED) {
-                notifications.sendLostConnectionNotification(device.name, Calendar.getInstance().getTimeInMillis(), device.timeFormat + "  " + TimeFormatType.TIME_DEFAULT);
+                notifications.sendLostConnectionNotification(device.address, device.name, Calendar.getInstance().getTimeInMillis(), device.timeFormat + "  " + TimeFormatType.TIME_DEFAULT);
             }
             device.connectionState = ConnectionType.DISCONNECTED;
         }
@@ -493,7 +494,7 @@ public class DeviceRepository implements DeviceSource {
                             device.lastHistoryState = state;
                         }
                     });
-            notifications.sendConnectedNotification(device.name);
+            notifications.sendConnectedNotification(device.address, device.name);
             bleService.write(device.address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ, false, device.gValue, device.xyzValue));
             bleService.write(address, new byte[]{(byte) 0xa0});// 发A0
         } else {
@@ -552,7 +553,7 @@ public class DeviceRepository implements DeviceSource {
                         public void accept(Device device) throws Exception {// 新设备装进序列
                             pairedDevices.put(address, device);
                             handleDeviceCountChangeListen();
-                            notifications.sendConnectedNotification(device.name);
+                            notifications.sendConnectedNotification(device.address, device.name);
                             bleService.write(device.address, new byte[]{(byte) 0xa0});// 发A0
                         }
                     });
@@ -586,7 +587,7 @@ public class DeviceRepository implements DeviceSource {
             if ((device.lastHistoryState.indexL != (byte) 0x00 || device.lastHistoryState.indexH != (byte) 0x00) &&
                     (device.lastHistoryState.indexL != (byte) 0xff && device.lastHistoryState.indexH != (byte) 0xff)) {
                 if (data[6] == (byte) 0x00 && data[7] == (byte) 0x00) {
-                    notifications.sendChangeNewBatteryNotification(device.name);
+                    notifications.sendChangeNewBatteryNotification(device.address, device.name);
                     return;
                 }
             }
@@ -866,7 +867,7 @@ public class DeviceRepository implements DeviceSource {
             Device device = pairedDevices.get(address);
             int lastPower = device.battery;
             if (power < 15 && (power < lastPower || lastPower == 0)) {
-                notifications.sendLowPowerNotification();
+                notifications.sendLowPowerNotification(device.address, device.name);
             }
             device.battery = power;
         }
@@ -877,7 +878,7 @@ public class DeviceRepository implements DeviceSource {
             Device device = pairedDevices.get(address);
             if (device.connectionState == ConnectionType.DISCONNECTED) {
                 device.connectionState = ConnectionType.CONNECTING;
-                bleService.connect(address);
+                bleService.connect(address, true);
                 Log.d(TAG, "搜索到设备 执行重连");
             }
         }
@@ -1217,7 +1218,7 @@ public class DeviceRepository implements DeviceSource {
         }
         connectCallbackAddress = address;
         connectionCallback = callback;
-        bleService.connect(address);
+        bleService.connect(address, true);
     }
 
     /**********************************************find功能*************************************************** */
