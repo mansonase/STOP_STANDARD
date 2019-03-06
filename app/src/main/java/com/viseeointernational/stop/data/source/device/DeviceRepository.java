@@ -1179,7 +1179,7 @@ public class DeviceRepository implements DeviceSource {
     @Override
     public void search(int seconds, @NonNull final SearchCallback callback) {
         if (!bleService.isBleAvailable()) {
-            searchCallback.onBleNotAvailable();
+            callback.onBleNotAvailable();
             return;
         }
         searchCallback = callback;
