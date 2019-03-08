@@ -151,7 +151,7 @@ public interface DeviceSource {
         void onDisconnected();
     }
 
-    void connect(@NonNull String address, @Nullable ConnectionCallback callback);
+    void connect(@NonNull String address, @NonNull ConnectionCallback callback);
 
 
     interface SettingCallback {

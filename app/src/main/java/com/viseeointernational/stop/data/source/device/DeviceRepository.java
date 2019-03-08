@@ -1211,7 +1211,7 @@ public class DeviceRepository implements DeviceSource {
     }
 
     @Override
-    public void connect(@NonNull String address, @Nullable ConnectionCallback callback) {
+    public void connect(@NonNull String address, @NonNull ConnectionCallback callback) {
         if (!bleService.isBleAvailable()) {
             callback.onBleNotAvailable();
             return;
