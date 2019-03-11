@@ -73,6 +73,8 @@ public class MainActivity extends BaseActivity implements MainActivityContract.V
 
     @Inject
     MainActivityContract.Presenter presenter;
+    @BindView(R.id.version)
+    TextView version;
 
     private Disposable disposable;
 
@@ -85,6 +87,11 @@ public class MainActivity extends BaseActivity implements MainActivityContract.V
         ButterKnife.bind(this);
 
         ((App) getApplication()).getAppComponent().mainActivityComponent().build().inject(this);
+    }
+
+    @Override
+    public void showVersion(String s) {
+        version.setText(s);
     }
 
     @Override

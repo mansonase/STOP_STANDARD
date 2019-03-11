@@ -98,9 +98,9 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="15dp"
-        android:textColor="@color/text"
-        android:singleLine="true"
         android:maxLines="1"
+        android:singleLine="true"
+        android:textColor="@color/text"
         android:textSize="30dp"
         tools:text="ssdfsfsdf" />
 
@@ -198,10 +198,16 @@
             android:layout_marginBottom="10dp"
             android:background="@mipmap/ic_detail" />
 
-        <View
+        <TextView
+            android:id="@+id/version"
             android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/text"
+            android:textSize="14dp"
+            tools:text="V1.0.0" />
 
         <ImageButton
             android:id="@+id/reset"

@@ -11,6 +11,7 @@ import android.util.Log;
 
 import com.viseeointernational.stop.R;
 import com.viseeointernational.stop.data.constant.AlertTuneType;
+import com.viseeointernational.stop.data.constant.ChartType;
 import com.viseeointernational.stop.data.constant.StateType;
 import com.viseeointernational.stop.data.constant.TimeFormatType;
 import com.viseeointernational.stop.data.entity.Device;
@@ -124,6 +125,21 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
                         view.showAlertTune(alertTunes.get(device.alertTune));
                     }
                     view.showNotification(notifications.get(device.notificationType));
+
+                    switch (device.defaultShow) {
+                        case ChartType.HOUR:
+                            view.showHourChecked();
+                            break;
+                        case ChartType.DAY:
+                            view.showDayChecked();
+                            break;
+                        case ChartType.MONTH:
+                            view.showMonthChecked();
+                            break;
+                        case ChartType.YEAR:
+                            view.showYearChecked();
+                            break;
+                    }
                 }
                 if (startTime == 0 && endTime == 0) {
                     Calendar calendar = Calendar.getInstance();
@@ -154,6 +170,30 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     @Override
     public void dropView() {
         view = null;
+    }
+
+    @Override
+    public void setDefaultShowHour() {
+        setDefaultShow(ChartType.HOUR);
+    }
+
+    @Override
+    public void setDefaultShowDay() {
+        setDefaultShow(ChartType.DAY);
+    }
+
+    @Override
+    public void setDefaultShowMonth() {
+        setDefaultShow(ChartType.MONTH);
+    }
+
+    @Override
+    public void setDefaultShowYear() {
+        setDefaultShow(ChartType.YEAR);
+    }
+
+    private void setDefaultShow(int type) {
+        deviceSource.setDefaultShow(address, type);
     }
 
     private File getHeaderDir() {
@@ -571,7 +611,7 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
             view.showLoading();
         }
         Log.d(TAG, "start = " + TimeUtil.getTime(startTime, TimeFormatType.DATE_1_1 + "  " + TimeFormatType.TIME_DEFAULT) +
-        "end = " + TimeUtil.getTime(endTime, TimeFormatType.DATE_1_1 + "  " + TimeFormatType.TIME_DEFAULT));
+                "end = " + TimeUtil.getTime(endTime, TimeFormatType.DATE_1_1 + "  " + TimeFormatType.TIME_DEFAULT));
         deviceSource.getStatesContainTimeFormat(address, startTime, endTime, new DeviceSource.GetStatesContainTimeFormatCallback() {
             @Override
             public void onStatesLoaded(List<State> states, String timeFormat) {

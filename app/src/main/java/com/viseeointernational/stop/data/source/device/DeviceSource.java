@@ -112,6 +112,8 @@ public interface DeviceSource {
 
     void setNotification(@NonNull String address, int notificationType);
 
+    void setDefaultShow(@NonNull String address, int type);
+
     interface ResetCallback {
 
         void onSuccessful();

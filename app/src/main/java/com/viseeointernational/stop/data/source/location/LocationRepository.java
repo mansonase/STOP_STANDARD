@@ -1,6 +1,7 @@
 package com.viseeointernational.stop.data.source.location;
 
 import android.content.Context;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -44,6 +45,7 @@ public class LocationRepository implements LocationSource {
             callback.onLocationNotEnable();
             return;
         }
+
         Location location = locationManager.getLastKnownLocation(locationProvider);
         if (location != null) {
             callback.onLocationLoaded(location.getLatitude(), location.getLongitude());

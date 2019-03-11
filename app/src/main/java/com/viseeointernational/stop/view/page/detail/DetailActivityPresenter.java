@@ -3,6 +3,7 @@ package com.viseeointernational.stop.view.page.detail;
 import android.support.annotation.NonNull;
 
 import com.github.mikephil.charting.data.BarEntry;
+import com.viseeointernational.stop.data.constant.ChartType;
 import com.viseeointernational.stop.data.constant.StateType;
 import com.viseeointernational.stop.data.constant.TimeFormatType;
 import com.viseeointernational.stop.data.entity.Device;

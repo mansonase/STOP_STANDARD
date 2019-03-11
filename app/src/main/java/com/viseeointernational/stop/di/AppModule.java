@@ -58,6 +58,8 @@ public class AppModule {
     @Provides
     StopDatabase conditionDatabase(Context context) {
         return Room.databaseBuilder(context, StopDatabase.class, DATABASE_NAME)
+//                .addMigrations(StopDatabase.MIGRATION_1_2)
+                .fallbackToDestructiveMigration()
                 .build();
     }
 

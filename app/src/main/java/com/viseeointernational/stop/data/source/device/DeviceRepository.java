@@ -7,12 +7,12 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.viseeointernational.stop.data.constant.AlertTuneType;
+import com.viseeointernational.stop.data.constant.ChartType;
 import com.viseeointernational.stop.data.constant.ConnectionType;
 import com.viseeointernational.stop.data.constant.NotificationType;
 import com.viseeointernational.stop.data.constant.StateType;
 import com.viseeointernational.stop.data.constant.TimeFormatType;
 import com.viseeointernational.stop.data.entity.Device;
-import com.viseeointernational.stop.data.entity.HistoryData;
 import com.viseeointernational.stop.data.entity.State;
 import com.viseeointernational.stop.data.source.android.ble.BleEvent;
 import com.viseeointernational.stop.data.source.android.ble.BleService;
@@ -20,6 +20,7 @@ import com.viseeointernational.stop.data.source.base.database.DeviceDao;
 import com.viseeointernational.stop.data.source.base.database.StateDao;
 import com.viseeointernational.stop.util.BitmapUtil;
 import com.viseeointernational.stop.util.StringUtil;
+import com.viseeointernational.stop.util.TimeUtil;
 import com.viseeointernational.stop.view.notification.Notifications;
 
 import org.greenrobot.eventbus.EventBus;
@@ -213,6 +214,9 @@ public class DeviceRepository implements DeviceSource {
 
                     @Override
                     public void onError(Throwable e) {
+                        List<Device> list = new ArrayList<>(pairedDevices.values());
+                        callback.onDevicesLoaded(list);
+                        startAutoConnect();
                     }
 
                     @Override
@@ -457,6 +461,7 @@ public class DeviceRepository implements DeviceSource {
     }
 
     /************************************************配对回调*************************************************/
+
     private byte[] pairIds = new byte[4];// 缓存pair id
 
     private void handleB0(String address, byte[] data) {
@@ -479,88 +484,8 @@ public class DeviceRepository implements DeviceSource {
         }
     }
 
-    /************************************************连线成功*************************************************/
-    private void handleB2(final String address) {
-        Log.d(TAG, "b2连线成功" + address);
-        if (pairedDevices.containsKey(address)) {
-            Device device = pairedDevices.get(address);
-            device.connectionState = ConnectionType.CONNECTED;
-            Observable.just(device)
-                    .subscribeOn(Schedulers.io())
-                    .subscribe(new Consumer<Device>() {
-                        @Override
-                        public void accept(Device device) throws Exception {
-                            State state = stateDao.getLastStateWithoutType(device.address, StateType.RESET);
-                            device.lastHistoryState = state;
-                        }
-                    });
-            notifications.sendConnectedNotification(device.address, device.name);
-            bleService.write(device.address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ, false, device.gValue, device.xyzValue));
-            bleService.write(address, new byte[]{(byte) 0xa0});// 发A0
-        } else {
-            Observable.just(pairIds)
-                    .map(new Function<byte[], Device>() {
-                        @Override
-                        public Device apply(byte[] bytes) throws Exception {// 保存pairid 并初始化
-                            Device device = deviceDao.getDeviceByAddress(address);
-                            String pairId = StringUtil.bytes2HexStringEx(bytes);
-                            device.pairId = pairId;
-                            device.time = Calendar.getInstance().getTimeInMillis();
-                            device.timeFormat = TimeFormatType.DATE_1_1;
-                            device.alertTune = AlertTuneType.BELL;
-                            device.notificationType = NotificationType.ALWAYS;
-                            device.enableAlert = true;
-                            device.enableMonitoring = true;
-                            device.enableG = true;
-                            device.enableXYZ = true;
-                            device.gValue = (byte) 0x03;
-                            device.xyzValue = (byte) 0x0a;
-                            device.connectionState = ConnectionType.CONNECTED;
-                            deviceDao.insertDevice(device);
-                            return device;
-                        }
-                    })
-                    .doOnNext(new Consumer<Device>() {
-                        @Override
-                        public void accept(Device device) throws Exception {// 发送设置mode
-                            byte[] data = new byte[7];
-                            data[0] = (byte) 0xa4;// 设置mode
-                            data[1] = (byte) 0x0a;// 自动模式多久回报一次
-
-                            // mode
-                            data[2] = (byte) 0x02;// 启动自摸模式
-                            if (device.enableAlert) {
-                                data[2] |= (byte) 0x01;// 启动alert
-                            }
-                            if (device.enableG) {
-                                data[2] |= (byte) 0x04;// 启动g振动
-                            }
-                            if (device.enableXYZ) {
-                                data[2] |= (byte) 0x08;// 启动g振动
-                            }
-
-                            data[3] = (byte) 0x00;// 更换过电池为0
-                            data[4] = device.gValue;// g灵敏度
-                            data[5] = device.xyzValue;// xyz灵敏度
-                            data[6] = (byte) 0x01;
-                            bleService.write(device.address, data);
-                        }
-                    })
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Consumer<Device>() {
-                        @Override
-                        public void accept(Device device) throws Exception {// 新设备装进序列
-                            pairedDevices.put(address, device);
-                            handleDeviceCountChangeListen();
-                            notifications.sendConnectedNotification(device.address, device.name);
-                            bleService.write(device.address, new byte[]{(byte) 0xa0});// 发A0
-                        }
-                    });
-        }
-    }
-
     /************************************************连线失败*************************************************/
+
     private void handleEE(final String address, final byte[] data) {
         Log.d(TAG, "b2连接失败" + address);
         // 硬件会自动断开gatt
@@ -575,36 +500,110 @@ public class DeviceRepository implements DeviceSource {
         }
     }
 
-    private void handleA0(final String address, final byte[] data) {
-        if (data[5] == (byte) 0x00) {// 新电池不收历史
-            return;
-        }
+    /************************************************连线成功*************************************************/
+
+    private void handleB2(String address) {
+        Log.d(TAG, "b2连线成功" + address);
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
-            if (device.lastHistoryState == null) {
-                return;
-            }
-            if ((device.lastHistoryState.indexL != (byte) 0x00 || device.lastHistoryState.indexH != (byte) 0x00) &&
-                    (device.lastHistoryState.indexL != (byte) 0xff && device.lastHistoryState.indexH != (byte) 0xff)) {
-                if (data[6] == (byte) 0x00 && data[7] == (byte) 0x00) {
-                    notifications.sendChangeNewBatteryNotification(device.address, device.name);
-                    return;
-                }
-            }
+            device.isInit = false;
+            device.connectionState = ConnectionType.CONNECTED;
+            notifications.sendConnectedNotification(device.address, device.name);
+            bleService.write(device.address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ, false, device.gValue, device.xyzValue));
+            bleService.write(address, new byte[]{(byte) 0xa0});// 发A0拿历史数据
+        } else {
+            initNewDevice(address);
         }
-        Observable.create(new ObservableOnSubscribe<State>() {
-            @Override
-            public void subscribe(ObservableEmitter<State> emitter) throws Exception {
-                if (pairedDevices.containsKey(address)) {
-                    State state = pairedDevices.get(address).lastHistoryState;
-                    emitter.onNext(state);
-                    emitter.onComplete();
-                    return;
-                }
-                emitter.onError(new Throwable());
-            }
-        })
+    }
+
+    private void initNewDevice(final String address) {
+        Observable.just(pairIds)
+                .map(new Function<byte[], Device>() {
+                    @Override
+                    public Device apply(byte[] bytes) throws Exception {// 保存pairid 并初始化
+                        Device device = deviceDao.getDeviceByAddress(address);
+                        device.isInit = true;
+                        String pairId = StringUtil.bytes2HexStringEx(bytes);
+                        device.pairId = pairId;
+                        device.time = Calendar.getInstance().getTimeInMillis();
+                        device.timeFormat = TimeFormatType.DATE_1_1;
+                        device.alertTune = AlertTuneType.BELL;
+                        device.notificationType = NotificationType.ALWAYS;
+                        device.enableAlert = true;
+                        device.enableMonitoring = true;
+                        device.enableG = true;
+                        device.enableXYZ = true;
+                        device.gValue = (byte) 0x03;
+                        device.xyzValue = (byte) 0x0a;
+                        device.defaultShow = ChartType.HOUR;
+                        device.connectionState = ConnectionType.CONNECTED;
+                        deviceDao.insertDevice(device);
+                        return device;
+                    }
+                })
+                .doOnNext(new Consumer<Device>() {
+                    @Override
+                    public void accept(Device device) throws Exception {// 发送设置mode
+                        bleService.write(device.address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ,
+                                true, device.gValue, device.xyzValue));
+                    }
+                })
                 .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<Device>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(Device device) {
+                        pairedDevices.put(address, device);
+                        handleDeviceCountChangeListen();
+                        notifications.sendConnectedNotification(device.address, device.name);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
+    }
+
+    private void handleA0(final String address, final byte[] data) {
+        if (!pairedDevices.containsKey(address)) {
+            return;
+        }
+        final Device device = pairedDevices.get(address);
+        Observable.just(1)
+                .map(new Function<Integer, State>() {
+                    @Override
+                    public State apply(Integer integer) throws Exception {
+                        State state = stateDao.getLastStateWithoutType(device.address, StateType.RESET);
+                        if (state != null) {
+                            return state;
+                        }
+                        return new State();
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnNext(new Consumer<State>() {
+                    @Override
+                    public void accept(State state) throws Exception {
+                        if (data[6] == (byte) 0x00 && data[7] == (byte) 0x00) {
+                            notifications.sendChangeNewBatteryNotification(device.address, device.name);
+                            throw new Exception();
+                        }
+                        if (data[5] == (byte) 0x00) {
+                            Log.d(TAG, "新电池不接受历史");
+                            throw new Exception();
+                        }
+                    }
+                })
+                .observeOn(Schedulers.io())
                 .subscribe(new Observer<State>() {
                     @Override
                     public void onSubscribe(Disposable d) {
@@ -612,30 +611,28 @@ public class DeviceRepository implements DeviceSource {
 
                     @Override
                     public void onNext(State state) {
+                        long startTime;
                         long now = Calendar.getInstance().getTimeInMillis();
-                        if (now - state.time < 20000) {// 距离上次接受数据少于20秒时不读取历史
-                            Log.d(TAG, "距离上次小于20秒");
-                            return;
+                        if (state.time != 0) {
+                            startTime = state.time;
+                        } else {
+                            startTime = now - (data[6] & 0xff * 0x100 + data[7] & 0xff) * 1000 * 60;
                         }
-                        HistoryData historyData = new HistoryData(data[6], data[7], state.time);
-                        if (pairedDevices.containsKey(address)) {
-                            pairedDevices.get(address).historyData = historyData;
-                            Log.d(TAG, "history 次数" + historyData.readA1Count);
-
-                            byte[] a1 = new byte[5];
-                            a1[0] = (byte) 0xa1;
-                            a1[1] = (byte) 0x00;// page index 当为0是 要判断index % 2 获取 239或者240个数据 page index 不为0时全是240个数据
-                            a1[2] = data[6];// indexH
-                            a1[3] = data[7];// indexL
-                            a1[4] = (byte) 0x02;// pages = 1 每次请求240分钟的数据
-                            bleService.write(address, a1);
-                            Log.d(TAG, address + "发送A1数据 " + StringUtil.bytes2HexString(a1));
-                        }
+                        Log.d(TAG, "上次state时间 " + TimeUtil.getTime(startTime, TimeFormatType.DATE_3_1 + "  " + TimeFormatType.TIME_DEFAULT));
+                        device.historyDataSet = new HistoryDataSet(device.address, data[6], data[7], startTime, now);
+                        bleService.write(device.address, device.historyDataSet.createA1Cmd());
+                        device.historyTimer = new OperateTimer(new OperateTimer.Callback() {
+                            @Override
+                            public void onTimeOut() {
+                                bleService.write(device.address, device.historyDataSet.getA1());
+                            }
+                        });
                     }
 
                     @Override
                     public void onError(Throwable e) {
-                        Log.d(TAG, e.getMessage());
+                        device.historyDataSet = null;
+                        device.isInit = true;
                     }
 
                     @Override
@@ -645,130 +642,103 @@ public class DeviceRepository implements DeviceSource {
     }
 
     private void handleA1(final String address, final byte[] data) {
-        Log.d(TAG, "收到A1数据 " + address);
-        if (pairedDevices.containsKey(address)) {
-            final Device device = pairedDevices.get(address);
-            final HistoryData historyData = device.historyData;
-            if (historyData == null) {
-                return;
-            }
-            final byte pageIndex = data[6];
-            Observable.create(new ObservableOnSubscribe<List<State>>() {
-                @Override
-                public void subscribe(ObservableEmitter<List<State>> emitter) throws Exception {// 获取要存储的数据
-                    Log.d(TAG, device.address + " received a1 page index = " + pageIndex);
-                    List<State> statesToSave = new ArrayList<>();// 要保存的数据
-                    for (int i = 7; i < 127; i++) {
-                        if (pageIndex == (byte) 0x00 && historyData.indexL % 2 == 0 && i == 4) {
-                            if (historyData.timeCursor > historyData.lastTime) {
-                                int movementsCount = data[i] & 0x0f;
-                                if (movementsCount > 0) {
-                                    State state = new State();
-                                    state.time = historyData.timeCursor;
-                                    state.movementsCount = movementsCount;
-                                    state.type = StateType.HISTORY;
-                                    state.address = device.address;
-                                    statesToSave.add(state);
-                                    device.movementsCount += movementsCount;
+        if (!pairedDevices.containsKey(address)) {
+            return;
+        }
+        final Device device = pairedDevices.get(address);
+        if (device.historyTimer != null) {
+            device.historyTimer.stopCount();
+        }
+        if (device.historyDataSet == null) {
+            device.isInit = true;
+            device.historyTimer = null;
+            return;
+        }
+        Observable.just(1)
+                .doOnNext(new Consumer<Integer>() {
+                    @Override
+                    public void accept(Integer integer) throws Exception {
+                        for (int i = 7; i < 127; i++) {
+                            if (data[6] == (byte) 0x00 && i == 7 && (device.historyDataSet.indexL & 0xff) % 2 == 0) {// 第一组0-3bit有效
+                                int count = data[i] & 0x0f;
+                                if (!device.historyDataSet.isEnd()) {
+                                    device.historyDataSet.putState(count);
                                 }
-                                Log.d(TAG, "读取 time = " + historyData.timeCursor + "  count = " + movementsCount);
-                                historyData.timeCursor -= 60000;
-                            }
-                        } else {
-                            if (historyData.timeCursor > historyData.lastTime) {
-                                int movementsCount = data[i] & 0x0f;
-                                if (movementsCount > 0) {
-                                    State state = new State();
-                                    state.time = historyData.timeCursor;
-                                    state.movementsCount = movementsCount;
-                                    state.type = StateType.HISTORY;
-                                    state.address = device.address;
-                                    statesToSave.add(state);
-                                    device.movementsCount += movementsCount;
+                                device.historyDataSet.next();
+                            } else {// 0-7bit有效
+                                int count = (data[i] >> 4) & 0x0f;
+                                if (!device.historyDataSet.isEnd()) {
+                                    device.historyDataSet.putState(count);
                                 }
-                                Log.d(TAG, "读取 time = " + historyData.timeCursor + "  count = " + movementsCount);
-                                historyData.timeCursor -= 60000;
-                            }
-                            if (historyData.timeCursor > historyData.lastTime) {
-                                int movementsCount = data[i] >> 4 & 0x0f;
-                                if (movementsCount > 0) {
-                                    State state = new State();
-                                    state.time = historyData.timeCursor;
-                                    state.movementsCount = movementsCount;
-                                    state.type = StateType.HISTORY;
-                                    state.address = device.address;
-                                    statesToSave.add(state);
-                                    device.movementsCount += movementsCount;
+                                device.historyDataSet.next();
+                                count = data[i] & 0x0f;
+                                if (!device.historyDataSet.isEnd()) {
+                                    device.historyDataSet.putState(count);
                                 }
-                                Log.d(TAG, "读取 time = " + historyData.timeCursor + "  count = " + movementsCount);
-                                historyData.timeCursor -= 60000;
+                                device.historyDataSet.next();
                             }
                         }
                     }
-                    emitter.onNext(statesToSave);
-                    emitter.onComplete();
-                }
-            })
-                    .doOnNext(new Consumer<List<State>>() {
-                        @Override
-                        public void accept(List<State> states) throws Exception {// 保存数据
-                            Log.d(TAG, "保存历史 size = " + states.size());
+                })
+                .subscribeOn(Schedulers.computation())
+                .observeOn(Schedulers.io())
+                .map(new Function<Integer, Integer>() {
+                    @Override
+                    public Integer apply(Integer integer) throws Exception {
+                        if (device.historyDataSet.isEnd()) {
+                            List<State> states = device.historyDataSet.getReceivedData();
+                            int totalCount = device.historyDataSet.getTotalCount();
+                            device.historyDataSet = null;
+                            device.isInit = true;
+                            device.historyTimer = null;
                             stateDao.insertState(states);
-                            Log.d(TAG, "保存历史 size = " + states.size() + "成功 ");
+                            return totalCount;
                         }
-                    })
-                    .map(new Function<List<State>, Boolean>() {
-                        @Override
-                        public Boolean apply(List<State> states) throws Exception {// 是否要还读
-                            historyData.readA1Count--;
-                            return historyData.readA1Count > 0;
-                        }
-                    })
-                    .subscribeOn(Schedulers.computation())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Observer<Boolean>() {
-                        @Override
-                        public void onSubscribe(Disposable d) {
-                        }
-
-                        @Override
-                        public void onNext(Boolean aBoolean) {
-                            if (aBoolean) {
-                                if (pageIndex == (byte) 0xff) {
-                                    device.historyData = null;
-                                    handleMovementCountListen(device.address, device.movementsCount);
-                                } else {
-                                    byte indexH = historyData.indexH;
-                                    byte indexL = historyData.indexL;
-                                    byte[] a1 = new byte[5];
-                                    a1[0] = (byte) 0xa1;
-                                    a1[1] = (byte) (pageIndex + (byte) 0x01);// page index 当为0是 要判断index % 2 获取 119或者120个数据 page index 不为0时全是120个数据
-                                    a1[2] = indexH;// indexH
-                                    a1[3] = indexL;// indexL
-                                    a1[4] = (byte) 0x02;// pages = 1 每次请求120分钟的数据
-                                    bleService.write(device.address, a1);
-                                    Log.d(TAG, device.address + "发送A1数据 " + StringUtil.bytes2HexString(a1));
-                                }
-                            } else {
-                                device.historyData = null;
-                                handleMovementCountListen(device.address, device.movementsCount);
+                        bleService.write(address, device.historyDataSet.createA1Cmd());
+                        device.historyTimer = new OperateTimer(new OperateTimer.Callback() {
+                            @Override
+                            public void onTimeOut() {
+                                bleService.write(device.address, device.historyDataSet.getA1());
                             }
-                        }
+                        });
+                        return -1;
+                    }
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<Integer>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                    }
 
-                        @Override
-                        public void onError(Throwable e) {
-                            Log.d(TAG, "read history failed " + e.getMessage());
+                    @Override
+                    public void onNext(Integer integer) {
+                        if (integer != -1) {
+                            Log.d(TAG, "历史数据读取完毕 count = " + integer);
+                            device.movementsCount += integer;
+                            handleMovementCountListen(device.address, device.movementsCount);
+                        } else {
+                            Log.d(TAG, "历史数据还有等待读取");
                         }
+                    }
 
-                        @Override
-                        public void onComplete() {
-                        }
-                    });
-        }
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
     }
 
     private void handleC0(final String address, final byte[] data) {
         bleService.write(address, new byte[]{(byte) 0xa2});// 立即清除此通知
+        if (pairedDevices.containsKey(address)) {
+            if (!pairedDevices.get(address).isInit) {
+                Log.d(TAG, "未初始化完成");
+                return;
+            }
+        }
         saveC0State(address, data, Calendar.getInstance().getTimeInMillis());
     }
 
@@ -1117,6 +1087,15 @@ public class DeviceRepository implements DeviceSource {
         if (pairedDevices.containsKey(address)) {
             Device device = pairedDevices.get(address);
             device.notificationType = notificationType;
+            saveDeviceToDatabase(device);
+        }
+    }
+
+    @Override
+    public void setDefaultShow(@NonNull String address, int type) {
+        if (pairedDevices.containsKey(address)) {
+            Device device = pairedDevices.get(address);
+            device.defaultShow = type;
             saveDeviceToDatabase(device);
         }
     }
@@ -1536,7 +1515,7 @@ public class DeviceRepository implements DeviceSource {
         a4[1] = (byte) 0x0a;// 自动模式多久回报一次
 
         // mode
-        a4[2] = (byte) 0x02;// 启动自摸模式
+        a4[2] = (byte) 0x00;// 关闭每隔一段时间自动返回数据
         if (enableAlert) {
             a4[2] |= (byte) 0x01;// 启动alert
         }

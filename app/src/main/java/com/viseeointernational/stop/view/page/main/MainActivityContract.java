@@ -50,6 +50,8 @@ public interface MainActivityContract {
         void showAddNewDevice();
 
         void close();
+
+        void showVersion(String s);
     }
 
     interface Presenter extends BasePresenter<View> {

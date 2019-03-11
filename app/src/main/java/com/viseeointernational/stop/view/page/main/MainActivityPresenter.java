@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
+import com.viseeointernational.stop.BuildConfig;
 import com.viseeointernational.stop.R;
 import com.viseeointernational.stop.data.constant.StateType;
 import com.viseeointernational.stop.data.constant.TimeFormatType;
@@ -52,6 +53,11 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
     }
 
     private void init() {
+        if (view != null) {
+            view.showVersion("V" + BuildConfig.VERSION_NAME);
+        }
+
+
         if (shouldClose) {
             shouldClose = false;
             if (view != null) {

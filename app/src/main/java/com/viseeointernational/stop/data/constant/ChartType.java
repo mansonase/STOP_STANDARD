@@ -1,4 +1,4 @@
-package com.viseeointernational.stop.view.page.detail;
+package com.viseeointernational.stop.data.constant;
 
 public class ChartType {
 

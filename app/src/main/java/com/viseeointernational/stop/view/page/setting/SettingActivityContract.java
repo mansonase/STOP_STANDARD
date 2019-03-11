@@ -68,9 +68,25 @@ public interface SettingActivityContract {
         void showXYZEnable(boolean enable);
 
         void showXYZValue(int value);
+
+        void showHourChecked();
+
+        void showDayChecked();
+
+        void showMonthChecked();
+
+        void showYearChecked();
     }
 
     interface Presenter extends BasePresenter<View> {
+
+        void setDefaultShowHour();
+
+        void setDefaultShowDay();
+
+        void setDefaultShowMonth();
+
+        void setDefaultShowYear();
 
         void result(int requestCode, int resultCode, Intent data);
 

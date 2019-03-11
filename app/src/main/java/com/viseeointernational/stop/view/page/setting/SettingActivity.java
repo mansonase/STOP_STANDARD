@@ -17,7 +17,7 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
-import android.widget.ListView;
+import android.widget.RadioButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -30,6 +30,7 @@ import com.viseeointernational.stop.view.adapter.GpsAdapter;
 import com.viseeointernational.stop.view.custom.DateDialog;
 import com.viseeointernational.stop.view.custom.IfDialog;
 import com.viseeointernational.stop.view.custom.RenameDialog;
+import com.viseeointernational.stop.view.custom.ScrollViewListView;
 import com.viseeointernational.stop.view.custom.SelectDialog;
 import com.viseeointernational.stop.view.page.BaseActivity;
 import com.viseeointernational.stop.view.page.map.MapActivity;
@@ -66,7 +67,7 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
     @BindView(R.id.name)
     TextView name;
     @BindView(R.id.lv)
-    ListView lv;
+    ScrollViewListView lv;
     @BindView(R.id.alert_on_off)
     CheckBox alertOnOff;
     @BindView(R.id.time_format)
@@ -91,6 +92,14 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
     TextView g;
     @BindView(R.id.xyz)
     TextView xyz;
+    @BindView(R.id.hour)
+    RadioButton hour;
+    @BindView(R.id.day)
+    RadioButton day;
+    @BindView(R.id.month)
+    RadioButton month;
+    @BindView(R.id.year)
+    RadioButton year;
 
     private RenameDialog renameDialog;
 
@@ -132,8 +141,63 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
         gValue.setOnSeekBarChangeListener(onSeekBarChangeListener);
         xyzValue.setOnSeekBarChangeListener(onSeekBarChangeListener);
 
+        hour.setOnCheckedChangeListener(onCheckedChangeListener1);
+        day.setOnCheckedChangeListener(onCheckedChangeListener1);
+        month.setOnCheckedChangeListener(onCheckedChangeListener1);
+        year.setOnCheckedChangeListener(onCheckedChangeListener1);
+
         presenter.takeView(this);
     }
+
+    @Override
+    public void showHourChecked() {
+        hour.setOnCheckedChangeListener(null);
+        hour.setChecked(true);
+        hour.setOnCheckedChangeListener(onCheckedChangeListener1);
+    }
+
+    @Override
+    public void showDayChecked() {
+        day.setOnCheckedChangeListener(null);
+        day.setChecked(true);
+        day.setOnCheckedChangeListener(onCheckedChangeListener1);
+    }
+
+    @Override
+    public void showMonthChecked() {
+        month.setOnCheckedChangeListener(null);
+        month.setChecked(true);
+        month.setOnCheckedChangeListener(onCheckedChangeListener1);
+    }
+
+    @Override
+    public void showYearChecked() {
+        year.setOnCheckedChangeListener(null);
+        year.setChecked(true);
+        year.setOnCheckedChangeListener(onCheckedChangeListener1);
+    }
+
+    private CompoundButton.OnCheckedChangeListener onCheckedChangeListener1 = new CompoundButton.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            if (isChecked) {
+                switch (buttonView.getId()) {
+                    case R.id.hour:
+                        presenter.setDefaultShowHour();
+                        break;
+                    case R.id.day:
+                        presenter.setDefaultShowDay();
+                        break;
+                    case R.id.month:
+                        presenter.setDefaultShowMonth();
+                        break;
+                    case R.id.year:
+                        presenter.setDefaultShowYear();
+                        break;
+                }
+            }
+        }
+    };
 
     private SeekBar.OnSeekBarChangeListener onSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override

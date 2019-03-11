@@ -13,6 +13,7 @@ import android.widget.TextView;
 import com.github.mikephil.charting.data.BarEntry;
 import com.viseeointernational.stop.App;
 import com.viseeointernational.stop.R;
+import com.viseeointernational.stop.data.constant.ChartType;
 import com.viseeointernational.stop.view.adapter.LogAdapter;
 import com.viseeointernational.stop.view.custom.ChartView;
 import com.viseeointernational.stop.view.custom.DateDialog;

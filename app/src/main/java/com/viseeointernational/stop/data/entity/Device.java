@@ -5,6 +5,9 @@ import android.arch.persistence.room.Ignore;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.NonNull;
 
+import com.viseeointernational.stop.data.source.device.HistoryDataSet;
+import com.viseeointernational.stop.data.source.device.OperateTimer;
+
 @Entity
 public class Device {
 
@@ -38,6 +41,8 @@ public class Device {
 
     public byte xyzValue;// xyz灵敏度
 
+    public int defaultShow;// hour day month year
+
     @Ignore
     public int connectionState;// 是否已连接
 
@@ -60,6 +65,11 @@ public class Device {
     public State lastHistoryState;
 
     @Ignore
-    public HistoryData historyData;
+    public HistoryDataSet historyDataSet;
 
+    @Ignore
+    public boolean isInit;
+
+    @Ignore
+    public OperateTimer historyTimer;
 }
