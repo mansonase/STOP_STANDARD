@@ -1,12 +1,9 @@
 package com.viseeointernational.stop.di.component;
 
-import android.app.Activity;
-
 import com.viseeointernational.stop.di.ActivityScoped;
 import com.viseeointernational.stop.view.page.add.AddActivity;
-import com.viseeointernational.stop.view.page.add.AddActivityModule;
+import com.viseeointernational.stop.di.module.AddActivityModule;
 
-import dagger.BindsInstance;
 import dagger.Subcomponent;
 
 @ActivityScoped

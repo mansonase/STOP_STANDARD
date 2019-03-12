@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
@@ -30,12 +31,13 @@ import com.viseeointernational.stop.view.page.main.MainActivity;
 
 import org.greenrobot.eventbus.EventBus;
 
-import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
+import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
@@ -48,7 +50,8 @@ public class BleService extends Service {
     private static final UUID UUID_CHARACTERISTIC = UUID.fromString("00001525-1212-efde-1523-785feabcd123");
     private static final UUID UUID_DESCRIPTOR = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
-    private Map<String, BleDevice> connectedDevice = new HashMap<>();// 保存已连接的设备
+    private Hashtable<String, BleDevice> connectedDevice = new Hashtable<>();// 保存已连接的设备
+    private int reconnectCount;
 
     private Disposable disposable;// 搜索
 
@@ -57,25 +60,22 @@ public class BleService extends Service {
         public void onReceive(Context context, Intent intent) {
             int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
             switch (state) {
-                case BluetoothAdapter.STATE_OFF:// 蓝牙关闭时
+                case BluetoothAdapter.STATE_OFF:
                     Log.d(TAG, "蓝牙关闭");
                     clearDevices();
-                    sendEvent(BleEvent.BLUETOOTH_ADAPTER_DISABLE, null, null, 0, null);
+                    sendEvent(BleEvent.BLUETOOTH_ADAPTER_DISABLE, null, null, 0);
                     break;
-                case BluetoothAdapter.STATE_ON:// 蓝牙开启时
+                case BluetoothAdapter.STATE_ON:
                     Log.d(TAG, "蓝牙开启");
-                    sendEvent(BleEvent.BLUETOOTH_ADAPTER_ENABLE, null, null, 0, null);
+                    sendEvent(BleEvent.BLUETOOTH_ADAPTER_ENABLE, null, null, 0);
                     break;
             }
         }
     };
 
-    private int reconnectCount;
-
     @Override
     public void onCreate() {
         super.onCreate();
-
         Log.d(TAG, "服务创建");
 
         startForeground();// 开启前台服务
@@ -119,6 +119,7 @@ public class BleService extends Service {
     public void onDestroy() {
         Log.d(TAG, "服务销毁");
         unregisterReceiver(registerReceiver);
+        stopSearch();
         clearDevices();
         stopForeground(true);
         super.onDestroy();
@@ -128,10 +129,12 @@ public class BleService extends Service {
     private void clearDevices() {
         for (Map.Entry<String, BleDevice> entry : connectedDevice.entrySet()) {
             BleDevice bleDevice = entry.getValue();
-            BluetoothGatt gatt = bleDevice.getBluetoothGatt();
-            gatt.disconnect();
-            gatt.close();
-            bleDevice.release();
+            if (bleDevice != null) {
+                BluetoothGatt gatt = bleDevice.getBluetoothGatt();
+                gatt.disconnect();
+                gatt.close();
+                bleDevice.release();
+            }
         }
         connectedDevice.clear();
     }
@@ -146,40 +149,64 @@ public class BleService extends Service {
     }
 
     // 搜索
-    public void search(int seconds) {
-        final BluetoothAdapter adapter = getAdapter();
-        if (adapter == null) {
-            return;
-        }
+    public void search(final int seconds) {
+        Observable.just(1)
+                .subscribeOn(Schedulers.newThread())
+                .subscribe(new Observer<Integer>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(Integer integer) {
+                        BluetoothAdapter adapter = getAdapter();
+                        if (adapter != null) {
+                            adapter.stopLeScan(leScanCallback);
+                            adapter.startLeScan(leScanCallback);
+                            startSearchTimer(seconds);
+                        } else {
+                            sendEvent(BleEvent.SEARCH_FINISH, null, null, 0);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
+    }
+
+    private void startSearchTimer(int seconds) {
         if (disposable != null && !disposable.isDisposed()) {
             disposable.dispose();
             disposable = null;
         }
-        Observable.just(1)
-                .subscribeOn(Schedulers.newThread())
-                .subscribe(new Consumer<Integer>() {
-                    @Override
-                    public void accept(Integer integer) throws Exception {
-                        adapter.stopLeScan(leScanCallback);
-                        adapter.startLeScan(leScanCallback);
-                    }
-                });
         disposable = Observable.timer(seconds, TimeUnit.SECONDS)
+                .subscribeOn(Schedulers.newThread())
                 .subscribe(new Consumer<Long>() {
                     @Override
                     public void accept(Long aLong) throws Exception {
-                        stopSearch();
-                        sendEvent(BleEvent.SEARCH_FINISH, null, null, 0, null);
+                        if (disposable != null && !disposable.isDisposed()) {
+                            disposable.dispose();
+                            disposable = null;
+                        }
+                        BluetoothAdapter adapter = getAdapter();
+                        if (adapter != null) {
+                            adapter.stopLeScan(leScanCallback);
+                        }
+                        sendEvent(BleEvent.SEARCH_FINISH, null, null, 0);
                     }
                 });
-
     }
 
     private BluetoothAdapter.LeScanCallback leScanCallback = new BluetoothAdapter.LeScanCallback() {
 
         @Override
         public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-            sendEvent(BleEvent.SEARCH_DEVICE_FOUND, device.getAddress(), device.getName(), rssi, null);
+            sendEvent(BleEvent.SEARCH_DEVICE_FOUND, device.getAddress(), device.getName(), rssi);
         }
     };
 
@@ -188,16 +215,27 @@ public class BleService extends Service {
             disposable.dispose();
             disposable = null;
         }
-        final BluetoothAdapter adapter = getAdapter();
-        if (adapter == null) {
-            return;
-        }
         Observable.just(1)
                 .subscribeOn(Schedulers.newThread())
-                .subscribe(new Consumer<Integer>() {
+                .subscribe(new Observer<Integer>() {
                     @Override
-                    public void accept(Integer integer) throws Exception {
-                        adapter.stopLeScan(leScanCallback);
+                    public void onSubscribe(Disposable d) {
+                    }
+
+                    @Override
+                    public void onNext(Integer integer) {
+                        BluetoothAdapter adapter = getAdapter();
+                        if (adapter != null) {
+                            adapter.stopLeScan(leScanCallback);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                    }
+
+                    @Override
+                    public void onComplete() {
                     }
                 });
     }
@@ -206,26 +244,25 @@ public class BleService extends Service {
         if (connectedDevice.containsKey(address)) {
             return;
         }
+        reconnectCount = reconnect ? 2 : 0;
+        doConnect(address);
+    }
+
+    private void doConnect(String address) {
         BluetoothAdapter adapter = getAdapter();
         if (adapter != null) {
-            if(reconnect){
-                reconnectCount = 3;
-            }
-            Log.d(TAG, "正在连接 " + address);
+            Log.d(TAG, "GATT正在连接 " + address);
             BluetoothDevice device = adapter.getRemoteDevice(address);
             device.connectGatt(this, false, bluetoothGattCallback);
         }
     }
 
-    public void disconnect(String address) {
+    public void write(@NonNull String address, @NonNull byte[] validData) {
         if (connectedDevice.containsKey(address)) {
-            connectedDevice.get(address).getBluetoothGatt().disconnect();
-        }
-    }
-
-    public void write(String address, byte[] validData) {
-        if (connectedDevice.containsKey(address)) {
-            connectedDevice.get(address).receiveWriteData(validData);
+            BleDevice bleDevice = connectedDevice.get(address);
+            if (bleDevice != null) {
+                bleDevice.receiveWriteData(validData);
+            }
         }
     }
 
@@ -242,14 +279,14 @@ public class BleService extends Service {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {// 连接成功
                     gatt.discoverServices();
-                } else {
+                } else {// 断开连接成功
                     String address = gatt.getDevice().getAddress();
                     gatt.close();
-                    Log.d(TAG, "已断开连接 " + address);
-                    releaseDevice(address);
-                    sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0, null);
+                    releaseConnectedDevice(address);
+                    Log.d(TAG, "GATT已断开连接 " + address);
+                    sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0);
                 }
             } else {
                 String address = gatt.getDevice().getAddress();
@@ -257,25 +294,27 @@ public class BleService extends Service {
                 if (!connectedDevice.containsKey(address)) {// 正在连接的设备要重连
                     if (reconnectCount > 0) {
                         reconnectCount--;
-                        Log.d(TAG, "正在重连 " + address);
-                        connect(address, false);
+                        Log.d(TAG, "GATT正在重连 " + address);
+                        doConnect(address);
                     } else {
-                        Log.d(TAG, "连接失败 " + address);
-                        releaseDevice(address);
-                        sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0, null);
+                        Log.d(TAG, "GATT连接失败 " + address);
+                        releaseConnectedDevice(address);
+                        sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0);
                     }
                 } else {// 已连接的设备断开连接
-                    Log.d(TAG, "连接失败 " + address);
-                    releaseDevice(address);
-                    sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0, null);
+                    Log.d(TAG, "GATT连接失败 " + address);
+                    releaseConnectedDevice(address);
+                    sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0);
                 }
             }
         }
 
-        // 释放设备
-        private void releaseDevice(String address) {
+        private void releaseConnectedDevice(String address) {
             if (connectedDevice.containsKey(address)) {
-                connectedDevice.get(address).release();
+                BleDevice bleDevice = connectedDevice.get(address);
+                if (bleDevice != null) {
+                    bleDevice.release();
+                }
                 connectedDevice.remove(address);
             }
         }
@@ -298,10 +337,10 @@ public class BleService extends Service {
 
                 // 连接成功
                 String address = gatt.getDevice().getAddress();
-                BleDevice tool = new BleDevice(address, gatt, characteristic);
-                connectedDevice.put(address, tool);
-                Log.d(TAG, "连接成功 " + address);
-                sendEvent(BleEvent.GATT_CONNECTED, address, null, 0, null);
+                BleDevice bleDevice = new BleDevice(address, gatt, characteristic);
+                connectedDevice.put(address, bleDevice);
+                Log.d(TAG, "GATT连接成功 " + address);
+                sendEvent(BleEvent.GATT_CONNECTED, address, null, 0);
             }
         }
 
@@ -310,18 +349,20 @@ public class BleService extends Service {
             byte[] data = characteristic.getValue();
             String address = gatt.getDevice().getAddress();
             if (connectedDevice.containsKey(address)) {// 收到数据丢给相应的设备
-                connectedDevice.get(address).receiveReadData(data);
+                BleDevice bleDevice = connectedDevice.get(address);
+                if (bleDevice != null) {
+                    bleDevice.receiveReadData(data);
+                }
             }
         }
     };
 
-    private void sendEvent(int type, String address, String name, int rssi, byte[] value) {
+    private void sendEvent(int type, String address, String name, int rssi) {
         BleEvent event = new BleEvent();
         event.type = type;
         event.address = address;
         event.name = name;
         event.rssi = rssi;
-        event.value = value;
         EventBus.getDefault().post(event);
     }
 

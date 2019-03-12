@@ -79,6 +79,7 @@ public class ReadThread extends Thread {
     public void close() {
         isStop = true;
         interrupt();
+        readData.clear();
     }
 
     public interface Callback {

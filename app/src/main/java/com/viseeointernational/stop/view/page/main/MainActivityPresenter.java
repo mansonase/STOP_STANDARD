@@ -12,7 +12,6 @@ import com.viseeointernational.stop.data.constant.StateType;
 import com.viseeointernational.stop.data.constant.TimeFormatType;
 import com.viseeointernational.stop.data.entity.Device;
 import com.viseeointernational.stop.data.entity.State;
-import com.viseeointernational.stop.data.source.base.sharedpreferences.SharedPreferencesHelper;
 import com.viseeointernational.stop.data.source.device.DeviceSource;
 import com.viseeointernational.stop.data.source.location.LocationSource;
 import com.viseeointernational.stop.util.TimeUtil;
@@ -32,18 +31,16 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
     private Context context;
     private DeviceSource deviceSource;
     private LocationSource locationSource;
-    private SharedPreferencesHelper sharedPreferencesHelper;
 
     private String address;
 
     private boolean shouldClose = false;
 
     @Inject
-    public MainActivityPresenter(Context context, DeviceSource deviceSource, LocationSource locationSource, SharedPreferencesHelper sharedPreferencesHelper) {
+    public MainActivityPresenter(Context context, DeviceSource deviceSource, LocationSource locationSource) {
         this.context = context;
         this.deviceSource = deviceSource;
         this.locationSource = locationSource;
-        this.sharedPreferencesHelper = sharedPreferencesHelper;
     }
 
     @Override
@@ -56,18 +53,10 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
         if (view != null) {
             view.showVersion("V" + BuildConfig.VERSION_NAME);
         }
-
-
         if (shouldClose) {
             shouldClose = false;
             if (view != null) {
                 view.close();
-            }
-            return;
-        }
-        if (sharedPreferencesHelper.getIsFirstStart()) {
-            if (view != null) {
-                view.showGuide();
             }
             return;
         }
@@ -112,7 +101,6 @@ public class MainActivityPresenter implements MainActivityContract.Presenter {
             @Override
             public void onDevicesLoaded(List<Device> devices) {
                 if (devices.size() == 0) {
-                    sharedPreferencesHelper.setIsFirstStart(true);
                     if (view != null) {
                         view.showGuide();
                     }

@@ -4,7 +4,7 @@ import android.support.v4.app.Fragment;
 
 import com.viseeointernational.stop.di.FragmentScoped;
 import com.viseeointernational.stop.view.page.add.connect.ConnectFragment;
-import com.viseeointernational.stop.view.page.add.connect.ConnectFragmentModule;
+import com.viseeointernational.stop.di.module.ConnectFragmentModule;
 
 import dagger.BindsInstance;
 import dagger.Subcomponent;

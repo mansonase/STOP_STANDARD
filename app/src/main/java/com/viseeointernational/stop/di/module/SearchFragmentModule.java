@@ -1,9 +1,11 @@
-package com.viseeointernational.stop.view.page.add.search;
+package com.viseeointernational.stop.di.module;
 
 import android.content.Context;
 
 import com.viseeointernational.stop.di.FragmentScoped;
 import com.viseeointernational.stop.view.adapter.DeviceAdapter;
+import com.viseeointernational.stop.view.page.add.search.SearchFragmentContract;
+import com.viseeointernational.stop.view.page.add.search.SearchFragmentPresenter;
 
 import dagger.Module;
 import dagger.Provides;

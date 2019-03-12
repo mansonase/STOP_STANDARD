@@ -2,7 +2,7 @@ package com.viseeointernational.stop.di.component;
 
 import com.viseeointernational.stop.di.FragmentScoped;
 import com.viseeointernational.stop.view.page.add.search.SearchFragment;
-import com.viseeointernational.stop.view.page.add.search.SearchFragmentModule;
+import com.viseeointernational.stop.di.module.SearchFragmentModule;
 
 import dagger.Subcomponent;
 

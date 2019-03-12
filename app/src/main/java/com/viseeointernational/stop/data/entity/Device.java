@@ -62,13 +62,10 @@ public class Device {
     public int rssi;
 
     @Ignore
-    public State lastHistoryState;
-
-    @Ignore
     public HistoryDataSet historyDataSet;
 
     @Ignore
-    public boolean isInit;
+    public boolean isReady;
 
     @Ignore
     public OperateTimer historyTimer;

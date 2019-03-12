@@ -38,6 +38,7 @@ public class WriteThread extends Thread {
     public void close() {
         isStop = true;
         interrupt();
+        writeData.clear();
     }
 
     public interface Callback {

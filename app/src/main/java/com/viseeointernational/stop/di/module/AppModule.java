@@ -1,4 +1,4 @@
-package com.viseeointernational.stop.di;
+package com.viseeointernational.stop.di.module;
 
 import android.arch.persistence.room.Room;
 import android.content.Context;
@@ -7,14 +7,12 @@ import com.viseeointernational.stop.data.source.android.ble.BleService;
 import com.viseeointernational.stop.data.source.base.database.DeviceDao;
 import com.viseeointernational.stop.data.source.base.database.StateDao;
 import com.viseeointernational.stop.data.source.base.database.StopDatabase;
-import com.viseeointernational.stop.data.source.base.sharedpreferences.SharedPreferencesHelper;
 import com.viseeointernational.stop.data.source.device.DeviceRepository;
 import com.viseeointernational.stop.data.source.device.DeviceSource;
 import com.viseeointernational.stop.data.source.location.LocationRepository;
 import com.viseeointernational.stop.data.source.location.LocationSource;
 import com.viseeointernational.stop.di.component.AddActivityComponent;
 import com.viseeointernational.stop.di.component.DetailActivityComponent;
-import com.viseeointernational.stop.di.component.GuideActivityComponent;
 import com.viseeointernational.stop.di.component.MainActivityComponent;
 import com.viseeointernational.stop.di.component.SettingActivityComponent;
 import com.viseeointernational.stop.view.notification.Notifications;
@@ -25,7 +23,6 @@ import dagger.Module;
 import dagger.Provides;
 
 @Module(subcomponents = {MainActivityComponent.class,
-        GuideActivityComponent.class,
         SettingActivityComponent.class,
         DetailActivityComponent.class,
         AddActivityComponent.class})
@@ -75,11 +72,11 @@ public class AppModule {
         return database.stateDao();
     }
 
-    @Singleton
-    @Provides
-    SharedPreferencesHelper sharedPreferencesHelper(Context context) {
-        return new SharedPreferencesHelper(context, SHARED_PREFERENCES_NAME);
-    }
+//    @Singleton
+//    @Provides
+//    SharedPreferencesHelper sharedPreferencesHelper(Context context) {
+//        return new SharedPreferencesHelper(context, SHARED_PREFERENCES_NAME);
+//    }
 
     @Singleton
     @Provides

@@ -1,4 +1,4 @@
-package com.viseeointernational.stop.view.page.add;
+package com.viseeointernational.stop.di.module;
 
 import com.viseeointernational.stop.di.ActivityScoped;
 import com.viseeointernational.stop.di.component.ConnectFragmentComponent;

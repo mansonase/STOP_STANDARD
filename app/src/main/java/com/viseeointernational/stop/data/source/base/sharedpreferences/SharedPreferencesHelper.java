@@ -17,13 +17,13 @@ public class SharedPreferencesHelper {
         editor = sharedPreferences.edit();
     }
 
-    public boolean setIsFirstStart(boolean isFirstStart) {
-        editor.putBoolean(KEY_IS_FIRST_START, isFirstStart);
-        return editor.commit();
-    }
-
-    public boolean getIsFirstStart() {
-        return sharedPreferences.getBoolean(KEY_IS_FIRST_START, true);
-    }
+//    public boolean setIsFirstStart(boolean isFirstStart) {
+//        editor.putBoolean(KEY_IS_FIRST_START, isFirstStart);
+//        return editor.commit();
+//    }
+//
+//    public boolean getIsFirstStart() {
+//        return sharedPreferences.getBoolean(KEY_IS_FIRST_START, true);
+//    }
 
 }

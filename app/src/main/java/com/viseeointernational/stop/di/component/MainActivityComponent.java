@@ -2,7 +2,7 @@ package com.viseeointernational.stop.di.component;
 
 import com.viseeointernational.stop.di.ActivityScoped;
 import com.viseeointernational.stop.view.page.main.MainActivity;
-import com.viseeointernational.stop.view.page.main.MainActivityModule;
+import com.viseeointernational.stop.di.module.MainActivityModule;
 
 import dagger.Subcomponent;
 

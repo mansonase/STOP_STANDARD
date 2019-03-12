@@ -2,6 +2,7 @@ package com.viseeointernational.stop.data.source.android.ble;
 
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.viseeointernational.stop.util.StringUtil;
@@ -30,7 +31,7 @@ public class BleDevice implements ReadThread.Callback, WriteThread.Callback {
     private volatile Semaphore semaphore = new Semaphore(1);// 创建一个信号量 使读写同步（按序读写)
     private Disposable disposable;// 3秒自动释放信号量
 
-    public BleDevice(String address, BluetoothGatt bluetoothGatt, BluetoothGattCharacteristic characteristic) {
+    public BleDevice(@NonNull String address, @NonNull BluetoothGatt bluetoothGatt, @NonNull BluetoothGattCharacteristic characteristic) {
         this.address = address;
         this.bluetoothGatt = bluetoothGatt;
         this.characteristic = characteristic;
@@ -72,9 +73,9 @@ public class BleDevice implements ReadThread.Callback, WriteThread.Callback {
     }
 
     public void release() {
+        stopAutoReleaseSemaphore();
         writeThread.close();
         writeThread = null;
-        stopAutoReleaseSemaphore();
         readThread.close();
         readThread = null;
         semaphore.release();

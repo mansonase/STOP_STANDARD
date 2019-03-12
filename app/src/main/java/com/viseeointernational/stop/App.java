@@ -3,9 +3,9 @@ package com.viseeointernational.stop;
 import android.app.Application;
 
 import com.viseeointernational.stop.data.source.android.ble.BleService;
-import com.viseeointernational.stop.di.AppComponent;
-import com.viseeointernational.stop.di.AppModule;
-import com.viseeointernational.stop.di.DaggerAppComponent;
+import com.viseeointernational.stop.di.component.AppComponent;
+import com.viseeointernational.stop.di.component.DaggerAppComponent;
+import com.viseeointernational.stop.di.module.AppModule;
 
 public class App extends Application {
 

@@ -4,7 +4,7 @@ import android.app.Activity;
 
 import com.viseeointernational.stop.di.ActivityScoped;
 import com.viseeointernational.stop.view.page.setting.SettingActivity;
-import com.viseeointernational.stop.view.page.setting.SettingActivityModule;
+import com.viseeointernational.stop.di.module.SettingActivityModule;
 
 import dagger.BindsInstance;
 import dagger.Subcomponent;
