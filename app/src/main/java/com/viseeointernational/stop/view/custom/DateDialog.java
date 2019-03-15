@@ -247,16 +247,7 @@ public class DateDialog extends Dialog {
                 case R.id.day:
                     if (v.getTag() instanceof Integer) {
                         int day = (int) v.getTag();
-                        Calendar calendar = Calendar.getInstance();
-                        calendar.set(Calendar.YEAR, year);
-                        calendar.set(Calendar.MONTH, month);
-                        calendar.set(Calendar.DAY_OF_MONTH, day);
-                        calendar.set(Calendar.HOUR_OF_DAY, 0);
-                        calendar.set(Calendar.MINUTE, 0);
-                        calendar.set(Calendar.SECOND, 0);
-                        calendar.set(Calendar.MILLISECOND, 0);
-                        long time = calendar.getTimeInMillis();
-                        callback.onSelect(DateDialog.this, time);
+                        callback.onSelect(DateDialog.this, year, month, day);
                         dismiss();
                     }
                     break;
@@ -265,7 +256,7 @@ public class DateDialog extends Dialog {
     };
 
     public interface Callback {
-        void onSelect(DateDialog dialog, long time);
+        void onSelect(DateDialog dialog, int year, int month, int day);
     }
 
 }

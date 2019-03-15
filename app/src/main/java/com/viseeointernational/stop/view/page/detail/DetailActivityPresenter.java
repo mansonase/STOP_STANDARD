@@ -67,9 +67,6 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     }
 
     private void init() {
-        if (type == 0) {
-            type = ChartType.HOUR;
-        }
         if (time == 0) {
             time = Calendar.getInstance().getTimeInMillis();
         }
@@ -77,6 +74,7 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
             @Override
             public void onDeviceLoaded(Device device) {
                 timeFormat = device.timeFormat;
+                type = device.defaultShow;
                 showCurrentTime();
                 updateDataByTime(time);
             }

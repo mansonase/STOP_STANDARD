@@ -10,9 +10,21 @@ public interface DetailActivityContract {
 
     interface View extends BaseView {
 
-        void showTime(String s);
+        void showDate(String s);
 
-        void showCalendar(long baseTime, long currentTime);
+        void showHour(String s);
+
+        void showHourChecked();
+
+        void showDayChecked();
+
+        void showMonthChecked();
+
+        void showYearChecked();
+
+        void showCalendar(long today, long selectedTime);
+
+        void showTimePicker(int hour);
 
         void showChart(List<BarEntry> list, int position);
 
@@ -23,18 +35,30 @@ public interface DetailActivityContract {
 
         void setType(int type);
 
-        void setTime(long time);
-
-        void setTypeAndTime(int type, long time);
-
         int getType();
 
-        long getTime();
+        void checkHour();
+
+        void checkDay();
+
+        void checkMonth();
+
+        void checkYear();
+
+        void changeDate(int year, int month, int day);
+
+        void changeHour(int hour);
+
+        void showCalendar();
 
         void previousDay();
 
         void nextDay();
 
-        void loadCalendar();
+        void showTimePicker();
+
+        void previousHour();
+
+        void nextHour();
     }
 }

@@ -62,17 +62,12 @@
             android:layout_height="match_parent"
             android:background="@color/themeLight" />
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
-
         <ImageView
-            android:id="@+id/left"
+            android:id="@+id/previous_day"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
             android:src="@mipmap/ic_left" />
 
         <TextView
@@ -87,17 +82,44 @@
             tools:text="2018/03/03" />
 
         <ImageView
-            android:id="@+id/right"
+            android:id="@+id/next_day"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="10dp"
-            android:paddingEnd="10dp"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
             android:src="@mipmap/ic_right" />
 
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1" />
+
+        <ImageView
+            android:id="@+id/previous_hour"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
+            android:src="@mipmap/ic_left" />
+
+        <TextView
+            android:id="@+id/text_hour"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingTop="5dp"
+            android:paddingBottom="5dp"
+            android:textColor="@color/themeDarkDark"
+            android:textSize="16dp"
+            tools:text="09:00" />
+
+        <ImageView
+            android:id="@+id/next_hour"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="5dp"
+            android:paddingEnd="15dp"
+            android:src="@mipmap/ic_right" />
 
     </LinearLayout>
 
@@ -131,7 +153,6 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:button="@null"
-            android:checked="true"
             android:gravity="center"
             android:paddingTop="5dp"
             android:paddingBottom="5dp"

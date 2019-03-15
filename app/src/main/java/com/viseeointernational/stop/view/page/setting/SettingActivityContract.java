@@ -31,11 +31,15 @@ public interface SettingActivityContract {
 
         void openNotificationSelector(List<String> list);
 
+        void openDefaultShowSelector(List<String> list);
+
         void showTimeFormat(String s);
 
         void showAlertTune(String s);
 
         void showNotification(String s);
+
+        void showDefaultShowType(String s);
 
         void showAlertEnable(boolean enable);
 
@@ -67,26 +71,10 @@ public interface SettingActivityContract {
 
         void showXYZEnable(boolean enable);
 
-        void showXYZValue(int value);
-
-        void showHourChecked();
-
-        void showDayChecked();
-
-        void showMonthChecked();
-
-        void showYearChecked();
+//        void showXYZValue(int value);
     }
 
     interface Presenter extends BasePresenter<View> {
-
-        void setDefaultShowHour();
-
-        void setDefaultShowDay();
-
-        void setDefaultShowMonth();
-
-        void setDefaultShowYear();
 
         void result(int requestCode, int resultCode, Intent data);
 
@@ -108,6 +96,10 @@ public interface SettingActivityContract {
 
         void showNotificationTypeList();
 
+        void showDefaultShowTypeList();
+
+        void saveDefaultShow(int i);
+
         void saveTimeFormat(String s);
 
         void saveAlertTune(int i);
@@ -128,6 +120,6 @@ public interface SettingActivityContract {
 
         void saveG(int g);
 
-        void saveXYZ(int xyz);
+//        void saveXYZ(int xyz);
     }
 }

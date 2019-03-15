@@ -17,7 +17,6 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
-import android.widget.RadioButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -86,20 +85,10 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
     SeekBar gValue;
     @BindView(R.id.xyz_switch)
     CheckBox xyzSwitch;
-    @BindView(R.id.xyz_value)
-    SeekBar xyzValue;
     @BindView(R.id.g)
     TextView g;
-    @BindView(R.id.xyz)
-    TextView xyz;
-    @BindView(R.id.hour)
-    RadioButton hour;
-    @BindView(R.id.day)
-    RadioButton day;
-    @BindView(R.id.month)
-    RadioButton month;
-    @BindView(R.id.year)
-    RadioButton year;
+    @BindView(R.id.default_show)
+    TextView defaultShow;
 
     private RenameDialog renameDialog;
 
@@ -139,65 +128,10 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
         });
 
         gValue.setOnSeekBarChangeListener(onSeekBarChangeListener);
-        xyzValue.setOnSeekBarChangeListener(onSeekBarChangeListener);
-
-        hour.setOnCheckedChangeListener(onCheckedChangeListener1);
-        day.setOnCheckedChangeListener(onCheckedChangeListener1);
-        month.setOnCheckedChangeListener(onCheckedChangeListener1);
-        year.setOnCheckedChangeListener(onCheckedChangeListener1);
+//        xyzValue.setOnSeekBarChangeListener(onSeekBarChangeListener);
 
         presenter.takeView(this);
     }
-
-    @Override
-    public void showHourChecked() {
-        hour.setOnCheckedChangeListener(null);
-        hour.setChecked(true);
-        hour.setOnCheckedChangeListener(onCheckedChangeListener1);
-    }
-
-    @Override
-    public void showDayChecked() {
-        day.setOnCheckedChangeListener(null);
-        day.setChecked(true);
-        day.setOnCheckedChangeListener(onCheckedChangeListener1);
-    }
-
-    @Override
-    public void showMonthChecked() {
-        month.setOnCheckedChangeListener(null);
-        month.setChecked(true);
-        month.setOnCheckedChangeListener(onCheckedChangeListener1);
-    }
-
-    @Override
-    public void showYearChecked() {
-        year.setOnCheckedChangeListener(null);
-        year.setChecked(true);
-        year.setOnCheckedChangeListener(onCheckedChangeListener1);
-    }
-
-    private CompoundButton.OnCheckedChangeListener onCheckedChangeListener1 = new CompoundButton.OnCheckedChangeListener() {
-        @Override
-        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            if (isChecked) {
-                switch (buttonView.getId()) {
-                    case R.id.hour:
-                        presenter.setDefaultShowHour();
-                        break;
-                    case R.id.day:
-                        presenter.setDefaultShowDay();
-                        break;
-                    case R.id.month:
-                        presenter.setDefaultShowMonth();
-                        break;
-                    case R.id.year:
-                        presenter.setDefaultShowYear();
-                        break;
-                }
-            }
-        }
-    };
 
     private SeekBar.OnSeekBarChangeListener onSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
@@ -206,9 +140,9 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
                 case R.id.g_value:
                     g.setText((progress + 3) + "");
                     break;
-                case R.id.xyz_value:
-                    xyz.setText((progress + 10) + "");
-                    break;
+//                case R.id.xyz_value:
+//                    xyz.setText((progress + 10) + "");
+//                    break;
             }
         }
 
@@ -290,6 +224,21 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
                 presenter.saveNotification(position);
             }
         }).show(list);
+    }
+
+    @Override
+    public void openDefaultShowSelector(List<String> list) {
+        new SelectDialog(this, new SelectDialog.Callback() {
+            @Override
+            public void onSelect(SelectDialog dialog, int position, String item) {
+                presenter.saveDefaultShow(position);
+            }
+        }).show(list);
+    }
+
+    @Override
+    public void showDefaultShowType(String s) {
+        defaultShow.setText(s);
     }
 
     @Override
@@ -463,21 +412,25 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
         xyzSwitch.setOnCheckedChangeListener(onCheckedChangeListener);
     }
 
-    @Override
-    public void showXYZValue(int value) {
-        xyzValue.setProgress(value - 10);
-        xyz.setText(value + "");
-    }
+//    @Override
+//    public void showXYZValue(int value) {
+//        xyzValue.setProgress(value - 10);
+//        xyz.setText(value + "");
+//    }
 
-    @OnClick({R.id.save_g, R.id.save_xyz, R.id.header, R.id.rename, R.id.time_format_tag, R.id.alert_tune_tag,
+    @OnClick({R.id.default_show, R.id.default_show_tag, R.id.sensor_help, R.id.save_g, R.id.header, R.id.rename, R.id.time_format_tag, R.id.alert_tune_tag,
             R.id.notification_tag, R.id.find, R.id.un_pair, R.id.time_format, R.id.alert_tune, R.id.notification, R.id.download, R.id.date_start, R.id.date_end})
     public void onViewClicked(View view) {
         switch (view.getId()) {
+            case R.id.sensor_help:
+                // todo 此按钮目前没用到
+                break;
+            case R.id.default_show:
+            case R.id.default_show_tag:
+                presenter.showDefaultShowTypeList();
+                break;
             case R.id.save_g:
                 presenter.saveG(gValue.getProgress() + 3);
-                break;
-            case R.id.save_xyz:
-                presenter.saveXYZ(xyzValue.getProgress() + 10);
                 break;
             case R.id.header:
                 Matisse.from(this)

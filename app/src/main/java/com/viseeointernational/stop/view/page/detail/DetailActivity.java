@@ -13,10 +13,10 @@ import android.widget.TextView;
 import com.github.mikephil.charting.data.BarEntry;
 import com.viseeointernational.stop.App;
 import com.viseeointernational.stop.R;
-import com.viseeointernational.stop.data.constant.ChartType;
 import com.viseeointernational.stop.view.adapter.LogAdapter;
 import com.viseeointernational.stop.view.custom.ChartView;
 import com.viseeointernational.stop.view.custom.DateDialog;
+import com.viseeointernational.stop.view.custom.TimeDialog;
 import com.viseeointernational.stop.view.page.BaseActivity;
 
 import java.util.List;
@@ -33,8 +33,7 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
 
     public static final String KEY_ADDRESS = "address";
 
-    private static final String CURRENT_TYPE = "current_type";
-    private static final String CURRENT_TIME = "current_time";
+    private static final String SELECTED_TYPE = "selected_type";
 
     @Inject
     DetailActivityContract.Presenter presenter;
@@ -58,6 +57,8 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
     ChartView chart;
     @BindView(R.id.date)
     TextView date;
+    @BindView(R.id.text_hour)
+    TextView textHour;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -65,7 +66,7 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
         setContentView(R.layout.activity_detail);
         ButterKnife.bind(this);
 
-        ((App)getApplication()).getAppComponent().detailActivityComponent().activity(this).build().inject(this);
+        ((App) getApplication()).getAppComponent().detailActivityComponent().activity(this).build().inject(this);
 
         setSupportActionBar(toolbar);
         getSupportActionBar().setHomeButtonEnabled(true);
@@ -87,9 +88,7 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
         year.setOnCheckedChangeListener(onCheckedChangeListener);
 
         if (savedInstanceState != null) {
-            int currentType = savedInstanceState.getInt(CURRENT_TYPE);
-            long currentTime = savedInstanceState.getLong(CURRENT_TIME);
-            presenter.setTypeAndTime(currentType, currentTime);
+            presenter.setType(savedInstanceState.getInt(SELECTED_TYPE));
         }
     }
 
@@ -107,8 +106,7 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
 
     @Override
     public void onSaveInstanceState(Bundle outState, PersistableBundle outPersistentState) {
-        outState.putInt(CURRENT_TYPE, presenter.getType());
-        outState.putLong(CURRENT_TIME, presenter.getTime());
+        outState.putInt(SELECTED_TYPE, presenter.getType());
         super.onSaveInstanceState(outState, outPersistentState);
     }
 
@@ -118,16 +116,16 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
             if (isChecked) {
                 switch (buttonView.getId()) {
                     case R.id.hour:
-                        presenter.setType(ChartType.HOUR);
+                        presenter.checkHour();
                         break;
                     case R.id.day:
-                        presenter.setType(ChartType.DAY);
+                        presenter.checkDay();
                         break;
                     case R.id.month:
-                        presenter.setType(ChartType.MONTH);
+                        presenter.checkMonth();
                         break;
                     case R.id.year:
-                        presenter.setType(ChartType.YEAR);
+                        presenter.checkYear();
                         break;
                 }
             }
@@ -135,18 +133,62 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
     };
 
     @Override
-    public void showTime(String s) {
+    public void showDate(String s) {
         date.setText(s);
     }
 
     @Override
-    public void showCalendar(long baseTime, long currentTime) {
+    public void showHour(String s) {
+        textHour.setText(s);
+    }
+
+    @Override
+    public void showHourChecked() {
+        hour.setOnCheckedChangeListener(null);
+        hour.setChecked(true);
+        hour.setOnCheckedChangeListener(onCheckedChangeListener);
+    }
+
+    @Override
+    public void showDayChecked() {
+        day.setOnCheckedChangeListener(null);
+        day.setChecked(true);
+        day.setOnCheckedChangeListener(onCheckedChangeListener);
+    }
+
+    @Override
+    public void showMonthChecked() {
+        month.setOnCheckedChangeListener(null);
+        month.setChecked(true);
+        month.setOnCheckedChangeListener(onCheckedChangeListener);
+    }
+
+    @Override
+    public void showYearChecked() {
+        year.setOnCheckedChangeListener(null);
+        year.setChecked(true);
+        year.setOnCheckedChangeListener(onCheckedChangeListener);
+    }
+
+
+    @Override
+    public void showCalendar(long today, long selectedTime) {
         new DateDialog(this, new DateDialog.Callback() {
             @Override
-            public void onSelect(DateDialog dialog, long time) {
-                presenter.setTime(time);
+            public void onSelect(DateDialog dialog, int year, int month, int day) {
+                presenter.changeDate(year, month, day);
             }
-        }).show(baseTime, currentTime);
+        }).show(today, selectedTime);
+    }
+
+    @Override
+    public void showTimePicker(int hour) {
+        new TimeDialog(this, new TimeDialog.Callback() {
+            @Override
+            public void onSelect(TimeDialog dialog, int hour) {
+                presenter.changeHour(hour);
+            }
+        }).show(hour);
     }
 
     @Override
@@ -159,17 +201,26 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
         chart.setData(list, position);
     }
 
-    @OnClick({R.id.left, R.id.date, R.id.right})
+    @OnClick({R.id.previous_day, R.id.date, R.id.next_day, R.id.previous_hour, R.id.hour, R.id.next_hour})
     public void onViewClicked(View view) {
         switch (view.getId()) {
-            case R.id.left:
+            case R.id.previous_day:
                 presenter.previousDay();
                 break;
             case R.id.date:
-                presenter.loadCalendar();
+                presenter.showCalendar();
                 break;
-            case R.id.right:
+            case R.id.next_day:
                 presenter.nextDay();
+                break;
+            case R.id.previous_hour:
+                presenter.previousHour();
+                break;
+            case R.id.hour:
+                presenter.showTimePicker();
+                break;
+            case R.id.next_hour:
+                presenter.nextHour();
                 break;
         }
     }

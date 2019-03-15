@@ -54,6 +54,7 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     private List<String> timeFormats = new ArrayList<>();
     private List<String> alertTunes = new ArrayList<>();
     private List<String> notifications = new ArrayList<>();
+    private List<String> defaultShowTypes = new ArrayList<>();
 
     @Inject
     String address;
@@ -95,6 +96,12 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
         notifications.clear();
         notifications.add("Off");
         notifications.add("Always");
+
+        defaultShowTypes.clear();
+        defaultShowTypes.add("Hour");
+        defaultShowTypes.add("Day");
+        defaultShowTypes.add("Month");
+        defaultShowTypes.add("Year");
     }
 
     @Override
@@ -116,7 +123,7 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
                     view.showGEnable(device.enableG);
                     view.showXYZEnable(device.enableXYZ);
                     view.showGValue(device.gValue & 0xff);
-                    view.showXYZValue(device.xyzValue & 0xff);
+//                    view.showXYZValue(device.xyzValue & 0xff);
                     view.showAlertEnable(device.enableAlert);
                     view.showTimeFormat(device.timeFormat);
                     if (!device.enableMonitoring) {
@@ -128,16 +135,16 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
 
                     switch (device.defaultShow) {
                         case ChartType.HOUR:
-                            view.showHourChecked();
+                            view.showDefaultShowType("Hour");
                             break;
                         case ChartType.DAY:
-                            view.showDayChecked();
+                            view.showDefaultShowType("Day");
                             break;
                         case ChartType.MONTH:
-                            view.showMonthChecked();
+                            view.showDefaultShowType("Month");
                             break;
                         case ChartType.YEAR:
-                            view.showYearChecked();
+                            view.showDefaultShowType("Year");
                             break;
                     }
                 }
@@ -170,26 +177,6 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     @Override
     public void dropView() {
         view = null;
-    }
-
-    @Override
-    public void setDefaultShowHour() {
-        setDefaultShow(ChartType.HOUR);
-    }
-
-    @Override
-    public void setDefaultShowDay() {
-        setDefaultShow(ChartType.DAY);
-    }
-
-    @Override
-    public void setDefaultShowMonth() {
-        setDefaultShow(ChartType.MONTH);
-    }
-
-    @Override
-    public void setDefaultShowYear() {
-        setDefaultShow(ChartType.YEAR);
     }
 
     private void setDefaultShow(int type) {
@@ -352,6 +339,36 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     public void showNotificationTypeList() {
         if (view != null) {
             view.openNotificationSelector(notifications);
+        }
+    }
+
+    @Override
+    public void showDefaultShowTypeList() {
+        if (view != null) {
+            view.openDefaultShowSelector(defaultShowTypes);
+        }
+    }
+
+    @Override
+    public void saveDefaultShow(int i) {
+        int type = ChartType.HOUR;
+        switch (i) {
+            case 0:
+                type = ChartType.HOUR;
+                break;
+            case 1:
+                type = ChartType.DAY;
+                break;
+            case 2:
+                type = ChartType.MONTH;
+                break;
+            case 3:
+                type = ChartType.YEAR;
+                break;
+        }
+        deviceSource.setDefaultShow(address, type);
+        if (view != null) {
+            view.showDefaultShowType(defaultShowTypes.get(i));
         }
     }
 
@@ -891,62 +908,62 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
         });
     }
 
-    @Override
-    public void saveXYZ(int xyz) {
-        if (view != null) {
-            view.showLoading();
-        }
-        deviceSource.setXYZ(address, (byte) xyz, new DeviceSource.SettingCallback() {
-
-            @Override
-            public void onFailed() {
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showMessage(R.string.msg_failed);
-                }
-            }
-
-            @Override
-            public void onSuccessful() {
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showMessage(R.string.msg_successful);
-                }
-            }
-
-            @Override
-            public void onTimeOut() {
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showMessage(R.string.msg_time_out);
-                }
-            }
-
-            @Override
-            public void onBleNotAvailable() {
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showMessage(R.string.msg_ble_not_enable);
-                }
-            }
-
-            @Override
-            public void onDeviceDisconnected() {
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showMessage(R.string.msg_device_offline);
-                }
-            }
-
-            @Override
-            public void onDeviceNotAvailable() {
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showMessage(R.string.msg_device_not_available);
-                }
-            }
-        });
-    }
+//    @Override
+//    public void saveXYZ(int xyz) {
+//        if (view != null) {
+//            view.showLoading();
+//        }
+//        deviceSource.setXYZ(address, (byte) xyz, new DeviceSource.SettingCallback() {
+//
+//            @Override
+//            public void onFailed() {
+//                if (view != null) {
+//                    view.cancelLoading();
+//                    view.showMessage(R.string.msg_failed);
+//                }
+//            }
+//
+//            @Override
+//            public void onSuccessful() {
+//                if (view != null) {
+//                    view.cancelLoading();
+//                    view.showMessage(R.string.msg_successful);
+//                }
+//            }
+//
+//            @Override
+//            public void onTimeOut() {
+//                if (view != null) {
+//                    view.cancelLoading();
+//                    view.showMessage(R.string.msg_time_out);
+//                }
+//            }
+//
+//            @Override
+//            public void onBleNotAvailable() {
+//                if (view != null) {
+//                    view.cancelLoading();
+//                    view.showMessage(R.string.msg_ble_not_enable);
+//                }
+//            }
+//
+//            @Override
+//            public void onDeviceDisconnected() {
+//                if (view != null) {
+//                    view.cancelLoading();
+//                    view.showMessage(R.string.msg_device_offline);
+//                }
+//            }
+//
+//            @Override
+//            public void onDeviceNotAvailable() {
+//                if (view != null) {
+//                    view.cancelLoading();
+//                    view.showMessage(R.string.msg_device_not_available);
+//                }
+//            }
+//        });
+//    }
 
     private void getResetData(String address, long from, long to, final String format) {
         deviceSource.getResetStatesDesc(address, from, to, new DeviceSource.GetResetStatesDescCallback() {
