@@ -104,29 +104,9 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         this.view = null;
     }
 
-    private void showCurrentTime() {
-        if (view != null) {
-            view.showTime(TimeUtil.getTime(time, timeFormat));
-        }
-    }
-
     @Override
     public void setType(int type) {
         this.type = type;
-        showCurrentTime();
-        updateDataByType(type);
-    }
-
-    @Override
-    public void setTime(long time) {
-        this.time = time;
-        showCurrentTime();
-    }
-
-    @Override
-    public void setTypeAndTime(int type, long time) {
-        this.type = type;
-        this.time = time;
     }
 
     @Override
@@ -135,8 +115,53 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     }
 
     @Override
-    public long getTime() {
-        return time;
+    public void checkHour() {
+        checkType(ChartType.HOUR);
+    }
+
+    @Override
+    public void checkDay() {
+        checkType(ChartType.DAY);
+    }
+
+    @Override
+    public void checkMonth() {
+        checkType(ChartType.MONTH);
+    }
+
+    @Override
+    public void checkYear() {
+        checkType(ChartType.YEAR);
+    }
+
+    private void checkType(int type){
+        showCurrentTime();
+        updateDataByType(type);
+    }
+
+    private void showCurrentTime() {
+        if (view != null) {
+            view.showTime(TimeUtil.getTime(time, timeFormat));
+        }
+    }
+
+    @Override
+    public void changeDate(int year, int month, int day) {
+        // todo
+        this.time = time;
+        showCurrentTime();
+    }
+
+    @Override
+    public void changeHour(int hour) {
+
+    }
+
+    @Override
+    public void showCalendar() {
+        if (view != null) {
+            view.showCalendar(Calendar.getInstance().getTimeInMillis(), time);
+        }
     }
 
     @Override
@@ -153,6 +178,21 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         updateDataByTime(time);
     }
 
+    @Override
+    public void showTimePicker() {
+
+    }
+
+    @Override
+    public void previousHour() {
+
+    }
+
+    @Override
+    public void nextHour() {
+
+    }
+
     private void updateDataByTime(long time) {// log和统计图都更新
         if (view != null) {
             view.showLoading();
@@ -166,13 +206,6 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     private void updateDataByType(int type) {// 只更新统计图
         createChartParameters(time, type, timeFormat);
         getChartStates(address, chartFrom, chartTo);
-    }
-
-    @Override
-    public void loadCalendar() {
-        if (view != null) {
-            view.showCalendar(Calendar.getInstance().getTimeInMillis(), time);
-        }
     }
 
     private void createChartParameters(long time, int type, String timeFormat) {

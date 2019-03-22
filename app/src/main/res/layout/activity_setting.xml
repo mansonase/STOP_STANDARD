@@ -49,7 +49,7 @@
                     android:maxLines="2"
                     android:textColor="@color/text"
                     android:textSize="20dp"
-                    tools:text="sdfsssssssssssssssssssdf" />
+                    tools:text="名字" />
 
                 <TextView
                     android:id="@+id/rename"
@@ -136,7 +136,7 @@
                     android:gravity="center"
                     android:textColor="@color/text"
                     android:textSize="16dp"
-                    tools:text="sdfsf" />
+                    tools:text="日期格式" />
 
                 <TextView
                     android:id="@+id/alert_tune"
@@ -146,7 +146,7 @@
                     android:gravity="center"
                     android:textColor="@color/text"
                     android:textSize="16dp"
-                    tools:text="sdfsf" />
+                    tools:text="声音模式" />
 
                 <TextView
                     android:id="@+id/notification"
@@ -156,7 +156,7 @@
                     android:gravity="center"
                     android:textColor="@color/text"
                     android:textSize="16dp"
-                    tools:text="sdfsf" />
+                    tools:text="通知" />
 
             </LinearLayout>
 
@@ -369,9 +369,8 @@
                     android:layout_height="20dp"
                     android:layout_marginStart="15dp"
                     android:background="@drawable/bg_btn"
-                    android:gravity="
-"
-                    android:text="Default Show"
+                    android:gravity="center"
+                    android:text="Default Char"
                     android:textColor="@color/text_press"
                     android:textSize="14dp" />
 
@@ -383,7 +382,7 @@
                     android:gravity="center"
                     android:textColor="@color/text"
                     android:textSize="16dp"
-                    tools:text="sdfsf" />
+                    tools:text="Hour" />
 
             </LinearLayout>
 
