@@ -239,9 +239,11 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     private long startTime;
 
     @Override
-    public void setStartTime(long time) {
+    public void setStartTime(int year, int month, int day) {
         Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(time);
+        calendar.set(Calendar.YEAR, year);
+        calendar.set(Calendar.MONTH, month);
+        calendar.set(Calendar.DAY_OF_MONTH, day);
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
@@ -271,9 +273,11 @@ public class SettingActivityPresenter implements SettingActivityContract.Present
     private long endTime;
 
     @Override
-    public void setEndTime(long time) {
+    public void setEndTime(int year, int month, int day) {
         Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(time);
+        calendar.set(Calendar.YEAR, year);
+        calendar.set(Calendar.MONTH, month);
+        calendar.set(Calendar.DAY_OF_MONTH, day);
         calendar.set(Calendar.HOUR_OF_DAY, 23);
         calendar.set(Calendar.MINUTE, 59);
         calendar.set(Calendar.SECOND, 59);

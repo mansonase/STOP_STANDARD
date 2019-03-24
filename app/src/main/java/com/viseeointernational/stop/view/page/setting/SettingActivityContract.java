@@ -80,11 +80,11 @@ public interface SettingActivityContract {
 
         void showMap(State state);
 
-        void setStartTime(long time);
+        void setStartTime(int year, int month, int day);
 
         void showStartCalendar();
 
-        void setEndTime(long time);
+        void setEndTime(int year, int month, int day);
 
         void showEndCalendar();
 

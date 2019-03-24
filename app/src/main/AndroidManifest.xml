@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.viseeointernational.stop">
 
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -20,6 +22,11 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <service android:name="com.baidu.location.f" android:enabled="true" android:process=":remote"/>
+        <meta-data
+            android:name="com.baidu.lbsapi.API_KEY"
+            android:value="tVwkav82WoGEeLhAcyVKx6n2GSb1W47u" />
 
         <uses-library
             android:name="org.apache.http.legacy"

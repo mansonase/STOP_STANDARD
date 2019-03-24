@@ -511,7 +511,7 @@ public class DeviceRepository implements DeviceSource {
 
     /************************************************连线成功*************************************************/
 
-    private void handleB2(String address) {
+    private void handleB2(final String address) {
         Log.d(TAG, "b2连线成功" + address);
         if (pairedDevices.containsKey(address)) {// 自动重连情况
             Device device = pairedDevices.get(address);
@@ -522,6 +522,14 @@ public class DeviceRepository implements DeviceSource {
                 bleService.write(device.address, getA4Data(device.enableAlert, device.enableG, device.enableXYZ,
                         false, device.gValue, device.xyzValue));
                 bleService.write(address, new byte[]{(byte) 0xa0});// 发A0拿历史数据
+
+                device.historyTimer = new RepeatTimer(new RepeatTimer.Callback() {
+                    @Override
+                    public void onTimeOut() {
+                        bleService.write(address, new byte[]{(byte) 0xa0});
+                    }
+                });
+                device.historyTimer.startCount();
             }
         } else {// 新添加情况
             initNewDevice(address);
@@ -586,6 +594,10 @@ public class DeviceRepository implements DeviceSource {
         if (device == null) {
             return;
         }
+        if (device.historyTimer != null) {
+            device.historyTimer.stopCount();
+            device.historyTimer = null;
+        }
         if (data[5] == (byte) 0x00) {
             Log.d(TAG, "新电池不接受历史");
             device.isReady = true;
@@ -605,12 +617,13 @@ public class DeviceRepository implements DeviceSource {
         Log.d(TAG, "上次state时间 " + TimeUtil.getTime(startTime, TimeFormatType.DATE_3_1 + "  " + TimeFormatType.TIME_DEFAULT));
         device.historyDataSet = new HistoryDataSet(device.address, data[6], data[7], startTime, now);
         bleService.write(device.address, device.historyDataSet.createA1Cmd());
-        device.historyTimer = new OperateTimer(new OperateTimer.Callback() {
+        device.historyTimer = new RepeatTimer(new RepeatTimer.Callback() {
             @Override
             public void onTimeOut() {
                 bleService.write(device.address, device.historyDataSet.getA1());
             }
         });
+        device.historyTimer.startCount();
     }
 
     /************************************************历史数据处理*************************************************/
@@ -671,12 +684,13 @@ public class DeviceRepository implements DeviceSource {
                             return totalCount;
                         }
                         bleService.write(address, device.historyDataSet.createA1Cmd());
-                        device.historyTimer = new OperateTimer(new OperateTimer.Callback() {
+                        device.historyTimer = new RepeatTimer(new RepeatTimer.Callback() {
                             @Override
                             public void onTimeOut() {
                                 bleService.write(device.address, device.historyDataSet.getA1());
                             }
                         });
+                        device.historyTimer.startCount();
                         return -1;
                     }
                 })

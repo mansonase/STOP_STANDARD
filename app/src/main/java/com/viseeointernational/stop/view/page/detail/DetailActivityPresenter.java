@@ -141,7 +141,7 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
 
     private void showCurrentTime() {
         if (view != null) {
-            view.showTime(TimeUtil.getTime(time, timeFormat));
+//            view.showTime(TimeUtil.getTime(time, timeFormat));
         }
     }
 

@@ -342,8 +342,8 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
     public void showStartCalendar(long baseTime, long currentTime) {
         new DateDialog(this, new DateDialog.Callback() {
             @Override
-            public void onSelect(DateDialog dialog, long time) {
-                presenter.setStartTime(time);
+            public void onSelect(DateDialog dialog, int year, int month, int day) {
+                presenter.setStartTime(year, month, day);
             }
         }).show(baseTime, currentTime);
     }
@@ -352,8 +352,8 @@ public class SettingActivity extends BaseActivity implements SettingActivityCont
     public void showEndCalendar(long baseTime, long currentTime) {
         new DateDialog(this, new DateDialog.Callback() {
             @Override
-            public void onSelect(DateDialog dialog, long time) {
-                presenter.setEndTime(time);
+            public void onSelect(DateDialog dialog, int year, int month, int day) {
+                presenter.setEndTime(year, month, day);
             }
         }).show(baseTime, currentTime);
     }

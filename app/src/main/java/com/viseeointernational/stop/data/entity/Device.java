@@ -7,6 +7,7 @@ import android.support.annotation.NonNull;
 
 import com.viseeointernational.stop.data.source.device.HistoryDataSet;
 import com.viseeointernational.stop.data.source.device.OperateTimer;
+import com.viseeointernational.stop.data.source.device.RepeatTimer;
 
 @Entity
 public class Device {
@@ -68,5 +69,5 @@ public class Device {
     public boolean isReady;
 
     @Ignore
-    public OperateTimer historyTimer;
+    public RepeatTimer historyTimer;
 }

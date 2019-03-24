@@ -51,19 +51,25 @@ android {
     productFlavors {
         standard {
             dimension "default"
-            buildConfigField "String","FILE_PROVIDER","\"com.viseeointernational.stop.fileprovider\""
-            buildConfigField "long[]","VIBRATE_PATTERN", "new long[]{0, 200, 100, 200}"
+            buildConfigField "String", "FILE_PROVIDER", "\"com.viseeointernational.stop.fileprovider\""
+            buildConfigField "long[]", "VIBRATE_PATTERN", "new long[]{0, 200, 100, 200}"
             manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.fileprovider"]
         }
-        go {
-            dimension "default"
-            applicationIdSuffix = ".go"
-            buildConfigField "String","FILE_PROVIDER","\"com.viseeointernational.stop.go.fileprovider\""
-            buildConfigField "long[]","VIBRATE_PATTERN", "new long[]{0, 100, 50, 100}"
-            manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.go.fileprovider"]
-        }
+//        go {
+//            dimension "default"
+//            applicationIdSuffix = ".go"
+//            buildConfigField "String", "FILE_PROVIDER", "\"com.viseeointernational.stop.go.fileprovider\""
+//            buildConfigField "long[]", "VIBRATE_PATTERN", "new long[]{0, 100, 50, 100}"
+//            manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.go.fileprovider"]
+//        }
     }
 
+    sourceSets {
+        main {
+            jniLibs.srcDirs 'libs'
+            jni.srcDirs = []    // disable automatic ndk-build
+        }
+    }
 }
 
 dependencies {
