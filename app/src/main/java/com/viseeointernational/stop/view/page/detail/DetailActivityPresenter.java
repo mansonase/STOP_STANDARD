@@ -1,6 +1,7 @@
 package com.viseeointernational.stop.view.page.detail;
 
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 
 import com.github.mikephil.charting.data.BarEntry;
 import com.viseeointernational.stop.data.constant.ChartType;
@@ -25,7 +26,10 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
 
     private DeviceSource deviceSource;
 
-    private long time;// 选择的时间
+    private int year;
+    private int month;
+    private int day;
+    private int hour;
     private int type;// hour day month year
     private String timeFormat;// device 时间格式
 
@@ -36,21 +40,6 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
 
     private List<State> tempLogData = new ArrayList<>();
     private List<State> tempChartData = new ArrayList<>();
-
-    private void autoRefresh() {
-        List<String> logs = makeLog(tempLogData, timeFormat);
-        if (view != null) {
-            view.showLog(logs);
-        }
-
-        int position = makeChartCurrentPosition(false, chartFrom, chartTo, chartInterval);
-        List<State> chartData = new ArrayList<>();
-        chartData.addAll(tempChartData);
-        List<BarEntry> data = makeChart(chartData, chartFrom, chartTo, chartInterval, xAxisFormat);
-        if (view != null) {
-            view.showChart(data, position);
-        }
-    }
 
     @Inject
     String address;
@@ -63,45 +52,110 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     @Override
     public void takeView(final DetailActivityContract.View view) {
         this.view = view;
+        deviceSource.setMovementListener(address, listener);
         init();
-    }
-
-    private void init() {
-        if (time == 0) {
-            time = Calendar.getInstance().getTimeInMillis();
-        }
-        deviceSource.getDevice(address, new DeviceSource.GetDeviceCallback() {
-            @Override
-            public void onDeviceLoaded(Device device) {
-                timeFormat = device.timeFormat;
-                type = device.defaultShow;
-                showCurrentTime();
-                updateDataByTime(time);
-            }
-
-            @Override
-            public void onDeviceNotAvailable() {
-                timeFormat = TimeFormatType.DATE_1_1;
-                showCurrentTime();
-                updateDataByTime(time);
-            }
-        });
-        deviceSource.setMovementListener(address, new DeviceSource.MovementListener() {
-            @Override
-            public void onMovementReceived(@NonNull State state, @NonNull String timeFormat) {
-                if (chartFrom <= state.time && state.time < chartTo) {
-                    tempLogData.add(0, state);
-                    tempChartData.add(0, state);
-                    autoRefresh();
-                }
-            }
-        });
     }
 
     @Override
     public void dropView() {
         deviceSource.setMovementListener("", null);
-        this.view = null;
+        view = null;
+    }
+
+    private DeviceSource.MovementListener listener = new DeviceSource.MovementListener() {
+        @Override
+        public void onMovementReceived(@NonNull State state, @NonNull String timeFormat) {
+            if (chartFrom <= state.time && state.time < chartTo) {
+                tempLogData.add(0, state);
+                tempChartData.add(0, state);
+                List<String> logs = makeLog(tempLogData, timeFormat);
+                if (view != null) {
+                    view.showLog(logs);
+                }
+
+                int position = makeChartCurrentPosition(false, chartFrom, chartTo, chartInterval);
+                List<State> chartData = new ArrayList<>();
+                chartData.addAll(tempChartData);
+                List<BarEntry> data = makeChart(chartData, chartFrom, chartTo, chartInterval, xAxisFormat);
+                if (view != null) {
+                    view.showChart(data, position);
+                }
+            }
+        }
+    };
+
+    private void init() {
+        if (year == 0 || day == 0 || hour == 0) {
+            Calendar calendar = Calendar.getInstance();
+            year = calendar.get(Calendar.YEAR);
+            month = calendar.get(Calendar.MONTH);
+            day = calendar.get(Calendar.DAY_OF_MONTH);
+            hour = calendar.get(Calendar.HOUR_OF_DAY);
+        }
+        if (type != 0 && !TextUtils.isEmpty(timeFormat)) {
+            showCheckType(type);
+            showDate(year, month, day);
+            showHour(hour);
+            updateDataByTime(year, month, day, hour, type);
+            return;
+        }
+        deviceSource.getDevice(address, new DeviceSource.GetDeviceCallback() {
+            @Override
+            public void onDeviceLoaded(Device device) {
+                timeFormat = device.timeFormat;
+                if (type == 0) {
+                    type = device.defaultShow;
+                }
+                showCheckType(type);
+                showDate(year, month, day);
+                showHour(hour);
+                updateDataByTime(year, month, day, hour, type);
+            }
+
+            @Override
+            public void onDeviceNotAvailable() {
+            }
+        });
+    }
+
+    private void showCheckType(int type) {
+        if (view != null) {
+            switch (type) {
+                case ChartType.HOUR:
+                    view.showHourChecked();
+                    break;
+                case ChartType.DAY:
+                    view.showDayChecked();
+                    break;
+                case ChartType.MONTH:
+                    view.showMonthChecked();
+                    break;
+                case ChartType.YEAR:
+                    view.showYearChecked();
+                    break;
+            }
+        }
+    }
+
+    private void showDate(int year, int month, int day) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.YEAR, year);
+        calendar.set(Calendar.MONTH, month);
+        calendar.set(Calendar.DAY_OF_MONTH, day);
+        if (view != null) {
+            view.showDate(TimeUtil.getTime(calendar.getTimeInMillis(), timeFormat));
+        }
+    }
+
+    private void showHour(int hour) {
+        String shour = hour + "";
+        if (shour.length() == 1) {
+            shour = "0" + shour;
+        }
+        shour += ":00";
+        if (view != null) {
+            view.showHour(shour);
+        }
     }
 
     @Override
@@ -116,94 +170,137 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
 
     @Override
     public void checkHour() {
-        checkType(ChartType.HOUR);
+        type = ChartType.HOUR;
+        updateDataByType(year, month, day, hour, type);
     }
 
     @Override
     public void checkDay() {
-        checkType(ChartType.DAY);
+        type = ChartType.DAY;
+        updateDataByType(year, month, day, hour, type);
     }
 
     @Override
     public void checkMonth() {
-        checkType(ChartType.MONTH);
+        type = ChartType.MONTH;
+        updateDataByType(year, month, day, hour, type);
     }
 
     @Override
     public void checkYear() {
-        checkType(ChartType.YEAR);
-    }
-
-    private void checkType(int type){
-        showCurrentTime();
-        updateDataByType(type);
-    }
-
-    private void showCurrentTime() {
-        if (view != null) {
-//            view.showTime(TimeUtil.getTime(time, timeFormat));
-        }
+        type = ChartType.YEAR;
+        updateDataByType(year, month, day, hour, type);
     }
 
     @Override
     public void changeDate(int year, int month, int day) {
-        // todo
-        this.time = time;
-        showCurrentTime();
+        this.year = year;
+        this.month = month;
+        this.day = day;
+        showDate(year, month, day);
+        updateDataByTime(year, month, day, hour, type);
     }
 
     @Override
     public void changeHour(int hour) {
-
+        this.hour = hour;
+        showHour(hour);
+        updateDataByTime(year, month, day, hour, type);
     }
 
     @Override
     public void showCalendar() {
         if (view != null) {
-            view.showCalendar(Calendar.getInstance().getTimeInMillis(), time);
+            Calendar calendar = Calendar.getInstance();
+            long today = calendar.getTimeInMillis();
+            calendar.set(Calendar.YEAR, year);
+            calendar.set(Calendar.MONTH, month);
+            long currentTime = calendar.getTimeInMillis();
+            view.showCalendar(today, currentTime);
         }
     }
 
     @Override
     public void previousDay() {
-        time -= 60000l * 60 * 24;
-        showCurrentTime();
-        updateDataByTime(time);
+        day--;
+        showDate(year, month, day);
+        updateDataByTime(year, month, day, hour, type);
     }
 
     @Override
     public void nextDay() {
-        time += 60000l * 60 * 24;
-        showCurrentTime();
-        updateDataByTime(time);
+        day++;
+        showDate(year, month, day);
+        updateDataByTime(year, month, day, hour, type);
     }
 
     @Override
     public void showTimePicker() {
-
+        if (view != null) {
+            view.showTimePicker(hour);
+        }
     }
 
     @Override
     public void previousHour() {
-
+        if (hour > 0) {
+            hour--;
+        } else {
+            day--;
+            hour = 23;
+            showDate(year, month, day);
+        }
+        showHour(hour);
+        updateDataByTime(year, month, day, hour, type);
     }
 
     @Override
     public void nextHour() {
-
+        if (hour < 23) {
+            hour++;
+        } else {
+            day++;
+            hour = 0;
+            showDate(year, month, day);
+        }
+        showHour(hour);
+        updateDataByTime(year, month, day, hour, type);
     }
 
-    private void updateDataByTime(long time) {// log和统计图都更新
+    private void updateDataByTime(int year, int month, int day, int hour, int type) {// log和统计图都更新
         if (view != null) {
             view.showLoading();
         }
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(time);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        long from = calendar.getTimeInMillis();
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+        long to = calendar.getTimeInMillis();
+        deviceSource.getStatesDesc(address, from, to, new DeviceSource.GetStatesDescCallback() {
+            @Override
+            public void onStatesLoaded(List<State> states) {
+                tempLogData = states;
+                List<String> logs = makeLog(states, timeFormat);
+                if (view != null) {
+                    view.cancelLoading();
+                    view.showLog(logs);
+                }
+            }
+        });
         getLogStates(address, time);// log
 
         createChartParameters(time, type, timeFormat);
         getChartStates(address, chartFrom, chartTo);
     }
 
-    private void updateDataByType(int type) {// 只更新统计图
+    private void updateDataByType(int year, int month, int day, int hour, int type) {// 只更新统计图
         createChartParameters(time, type, timeFormat);
         getChartStates(address, chartFrom, chartTo);
     }
@@ -298,32 +395,6 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
                 }
                 break;
         }
-    }
-
-    private void getLogStates(String address, long time) {// log只展示所选择那天的
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(time);
-        calendar.set(Calendar.HOUR_OF_DAY, 0);
-        calendar.set(Calendar.MINUTE, 0);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-        long from = calendar.getTimeInMillis();
-        calendar.set(Calendar.HOUR_OF_DAY, 23);
-        calendar.set(Calendar.MINUTE, 59);
-        calendar.set(Calendar.SECOND, 59);
-        calendar.set(Calendar.MILLISECOND, 999);
-        long to = calendar.getTimeInMillis();
-        deviceSource.getStatesDesc(address, from, to, new DeviceSource.GetStatesDescCallback() {
-            @Override
-            public void onStatesLoaded(List<State> states) {
-                tempLogData = states;
-                List<String> logs = makeLog(states, timeFormat);
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showLog(logs);
-                }
-            }
-        });
     }
 
     private void getChartStates(String address, final long from, final long to) {

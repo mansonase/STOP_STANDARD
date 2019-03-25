@@ -22,7 +22,7 @@ public interface DetailActivityContract {
 
         void showYearChecked();
 
-        void showCalendar(long today, long selectedTime);
+        void showCalendar(long baseTime, long currentTime);
 
         void showTimePicker(int hour);
 

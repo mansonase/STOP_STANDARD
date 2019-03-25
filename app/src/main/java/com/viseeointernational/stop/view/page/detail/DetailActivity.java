@@ -172,13 +172,13 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
 
 
     @Override
-    public void showCalendar(long today, long selectedTime) {
+    public void showCalendar(long baseTime, long currentTime) {
         new DateDialog(this, new DateDialog.Callback() {
             @Override
             public void onSelect(DateDialog dialog, int year, int month, int day) {
                 presenter.changeDate(year, month, day);
             }
-        }).show(today, selectedTime);
+        }).show(baseTime, currentTime);
     }
 
     @Override
