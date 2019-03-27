@@ -616,6 +616,7 @@ public class DeviceRepository implements DeviceSource {
         }
         Log.d(TAG, "上次state时间 " + TimeUtil.getTime(startTime, TimeFormatType.DATE_3_1 + "  " + TimeFormatType.TIME_DEFAULT));
         device.historyDataSet = new HistoryDataSet(device.address, data[6], data[7], startTime, now);
+        device.isReady = true;
         bleService.write(device.address, device.historyDataSet.createA1Cmd());
         device.historyTimer = new RepeatTimer(new RepeatTimer.Callback() {
             @Override
@@ -641,7 +642,6 @@ public class DeviceRepository implements DeviceSource {
             device.historyTimer = null;
         }
         if (device.historyDataSet == null) {
-            device.isReady = true;
             return;
         }
         Observable.just(1)
@@ -679,7 +679,6 @@ public class DeviceRepository implements DeviceSource {
                             List<State> states = device.historyDataSet.getReceivedData();
                             int totalCount = device.historyDataSet.getTotalCount();
                             device.historyDataSet = null;
-                            device.isReady = true;
                             stateDao.insertState(states);
                             return totalCount;
                         }
