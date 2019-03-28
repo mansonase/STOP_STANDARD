@@ -52,6 +52,9 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     private List<State> tempLogData = new ArrayList<>();
     private List<State> tempChartData = new ArrayList<>();
 
+//    private List<BarEntry> tempChartData = new ArrayList<>();
+//    private List<String> temp
+
     @Inject
     String address;
 
@@ -74,28 +77,6 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         view = null;
     }
 
-    private DeviceSource.MovementListener listener = new DeviceSource.MovementListener() {
-        @Override
-        public void onMovementReceived(@NonNull State state, @NonNull String timeFormat) {
-//            if (from <= state.time && state.time < to) {
-//                tempLogData.add(0, state);
-//                tempChartData.add(0, state);
-//                List<String> logs = makeLog(tempLogData, timeFormat);
-//                if (view != null) {
-//                    view.showLog(logs);
-//                }
-//
-//                int position = makeChartCurrentPosition(false, from, to, interval);
-//                List<State> chartData = new ArrayList<>();
-//                chartData.addAll(tempChartData);
-//                List<BarEntry> data = makeChart(chartData, from, to, interval, xAxisFormat);
-//                if (view != null) {
-//                    view.showChart(data, position);
-//                }
-//            }
-        }
-    };
-
     private void init() {
         if (year == 0 || day == 0 || hour == 0) {
             Calendar calendar = Calendar.getInstance();
@@ -108,7 +89,8 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
             showCheckType(type);
             showDate(year, month, day);
             showHour(hour);
-            updateDataByTime(year, month, day, hour, type);
+            getLogData(year, month, day);
+            getChartData(year, month, day, hour, type);
             return;
         }
         deviceSource.getDevice(address, new DeviceSource.GetDeviceCallback() {
@@ -123,7 +105,8 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
                 showCheckType(type);
                 showDate(year, month, day);
                 showHour(hour);
-                updateDataByTime(year, month, day, hour, type);
+                getLogData(year, month, day);
+                getChartData(year, month, day, hour, type);
             }
 
             @Override
@@ -185,25 +168,25 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     @Override
     public void checkHour() {
         type = ChartType.HOUR;
-        updateDataByTime(year, month, day, hour, type);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
     public void checkDay() {
         type = ChartType.DAY;
-        updateDataByTime(year, month, day, hour, type);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
     public void checkMonth() {
         type = ChartType.MONTH;
-        updateDataByTime(year, month, day, hour, type);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
     public void checkYear() {
         type = ChartType.YEAR;
-        updateDataByTime(year, month, day, hour, type);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
@@ -212,14 +195,15 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         this.month = month;
         this.day = day;
         showDate(year, month, day);
-        updateDataByTime(year, month, day, hour, type);
+        getLogData(year, month, day);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
     public void changeHour(int hour) {
         this.hour = hour;
         showHour(hour);
-        updateDataByTime(year, month, day, hour, type);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
@@ -238,14 +222,16 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     public void previousDay() {
         day--;
         showDate(year, month, day);
-        updateDataByTime(year, month, day, hour, type);
+        getLogData(year, month, day);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
     public void nextDay() {
         day++;
         showDate(year, month, day);
-        updateDataByTime(year, month, day, hour, type);
+        getLogData(year, month, day);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
@@ -263,9 +249,10 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
             day--;
             hour = 23;
             showDate(year, month, day);
+            getLogData(year, month, day);
         }
         showHour(hour);
-        updateDataByTime(year, month, day, hour, type);
+        getChartData(year, month, day, hour, type);
     }
 
     @Override
@@ -276,9 +263,10 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
             day++;
             hour = 0;
             showDate(year, month, day);
+            getLogData(year, month, day);
         }
         showHour(hour);
-        updateDataByTime(year, month, day, hour, type);
+        getChartData(year, month, day, hour, type);
     }
 
     private String getMonthXAxisFormat(String timeFormat) {
@@ -323,62 +311,29 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         }
     }
 
-    private void updateDataByTime(int year, int month, int day, int hour, int type) {// log和统计图都更新
-        switch (type) {
-            case ChartType.HOUR:
-            default:
-                getDayData(year, month, day);
-                break;
-            case ChartType.DAY:
-                getDayData(year, month, day);
-                break;
-            case ChartType.MONTH:
-                getDayData(year, month, day);
-                break;
-            case ChartType.YEAR:
-                getDayData(year, month, day);
-                break;
-        }
-    }
-
-    private void getHourData(int year, int month, int day, int hour) {
-
-    }
-
-    private void getDayData(final int year, final int month, final int day) {
+    private void getLogData(final int year, final int month, final int day) {
         Observable.just(1)
-                .map(new Function<Integer, List<BarEntry>>() {
+                .map(new Function<Integer, List<State>>() {
                     @Override
-                    public List<BarEntry> apply(Integer integer) throws Exception {
+                    public List<State> apply(Integer integer) throws Exception {
                         Calendar calendar = Calendar.getInstance();
                         calendar.set(Calendar.YEAR, year);
                         calendar.set(Calendar.MONTH, month);
                         calendar.set(Calendar.DAY_OF_MONTH, day);
+                        calendar.set(Calendar.HOUR_OF_DAY, 0);
                         calendar.set(Calendar.MINUTE, 0);
                         calendar.set(Calendar.SECOND, 0);
                         calendar.set(Calendar.MILLISECOND, 0);
 
-                        List<BarEntry> ret = new ArrayList<>();
-                        for (int i = 0; i < 24; i++) {
-                            calendar.set(Calendar.HOUR_OF_DAY, i);
-                            long from = calendar.getTimeInMillis();
-                            calendar.set(Calendar.HOUR_OF_DAY, i + 1);
-                            long to = calendar.getTimeInMillis();
-                            List<State> states = stateDao.getStateAsc(address, from, to);
-                            int count = 0;
-                            for (int j = 0; j < states.size(); j++) {
-                                State state = states.get(j);
-                                count += state.movementsCount;
-                            }
-                            BarEntry barEntry = new BarEntry(i, count, TimeUtil.getTime(from, yearXAxisFormat));
-                            ret.add(barEntry);
-                        }
-                        return ret;
+                        long from = calendar.getTimeInMillis();
+                        calendar.set(Calendar.DAY_OF_MONTH, day + 1);
+                        long to = calendar.getTimeInMillis();
+                        return stateDao.getStateDesc(address, from, to);
                     }
                 })
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Observer<List<BarEntry>>() {
+                .subscribe(new Observer<List<State>>() {
                     @Override
                     public void onSubscribe(Disposable d) {
                         if (view != null) {
@@ -387,11 +342,9 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
                     }
 
                     @Override
-                    public void onNext(List<BarEntry> barEntries) {
-                        if (view != null) {
-                            view.cancelLoading();
-                            view.showChart(barEntries, -1);
-                        }
+                    public void onNext(List<State> states) {
+                        tempLogData = states;
+                        makeLog(states);
                     }
 
                     @Override
@@ -407,60 +360,414 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
                 });
     }
 
-    private void getMonthData(int year, int month) {
+    private void makeLog(final List<State> list) {
+        Observable.just(1)
+                .map(new Function<Integer, List<String>>() {
+                    @Override
+                    public List<String> apply(Integer integer) throws Exception {
+                        List<String> ret = new ArrayList<>();
 
+                        Calendar calendar = Calendar.getInstance();
+                        int tempCount = 0;
+                        long tempTime = -1;
+                        int tempHour = -1;
+                        int tempMinute = -1;
+                        for (int i = 0; i < list.size(); i++) {
+                            State state = list.get(i);
+                            int count = state.movementsCount;
+                            long time = state.time;
+                            calendar.setTimeInMillis(time);
+                            int hour = calendar.get(Calendar.HOUR_OF_DAY);
+                            int minute = calendar.get(Calendar.MINUTE);
+                            if (tempTime == -1) {
+                                tempTime = time;
+                                tempHour = hour;
+                                tempMinute = minute;
+                            }
+                            if (state.type == StateType.RESET) {
+                                if (tempCount != 0) {
+                                    String log = TimeUtil.getTime(tempTime, timeFormat + "  HH:mm") + "  -->  " + tempCount + "  movements";
+                                    ret.add(log);
+                                }
+                                String log = TimeUtil.getTime(time, timeFormat + "  HH:mm:ss") + "  -->  reset";
+                                ret.add(log);
+                                tempCount = 0;
+                                tempTime = -1;
+                                tempHour = -1;
+                                tempMinute = -1;
+                            } else {
+                                if (tempHour != hour || tempMinute != minute) {
+                                    if (tempCount != 0) {
+                                        String log = TimeUtil.getTime(tempTime, timeFormat + "  HH:mm") + "  -->  " + tempCount + "  movements";
+                                        ret.add(log);
+                                    }
+                                    tempCount = 0;
+                                    tempHour = hour;
+                                    tempMinute = minute;
+                                }
+                                tempCount += count;
+                                tempTime = time;
+                            }
+                        }
+
+                        if (tempCount != 0) {
+                            String log = TimeUtil.getTime(tempTime, timeFormat + "  HH:mm") + "  -->  " + tempCount + "  movements";
+                            ret.add(log);
+                        }
+
+                        return ret;
+                    }
+                })
+                .subscribeOn(Schedulers.computation())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<List<String>>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(List<String> list) {
+                        if (view != null) {
+                            view.cancelLoading();
+                            view.showLog(list);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        if (view != null) {
+                            view.cancelLoading();
+                        }
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
     }
 
-    private void getYearData(final int year) {
+    private DeviceSource.MovementListener listener = new DeviceSource.MovementListener() {
+        @Override
+        public void onMovementReceived(@NonNull State state, @NonNull String timeFormat) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTimeInMillis(state.time);
+            int y = calendar.get(Calendar.YEAR);
+            int m = calendar.get(Calendar.MONTH);
+            int d = calendar.get(Calendar.DAY_OF_MONTH);
+            int h = calendar.get(Calendar.HOUR_OF_DAY);
+            if (y == year && m == month && d == day) {
+                tempLogData.add(0, state);
+                makeLog(tempLogData);
+            }
+
+            switch (type) {
+                case ChartType.HOUR:
+                    if (y == year && m == month && d == day && h == hour) {
+                        tempChartData.add(state);
+                        makeChart(tempChartData, false);
+                    }
+                    break;
+                case ChartType.DAY:
+                    if (y == year && m == month && d == day) {
+                        tempChartData.add(state);
+                        makeChart(tempChartData, false);
+                    }
+                    break;
+                case ChartType.MONTH:
+                    if (y == year && m == month) {
+                        tempChartData.add(state);
+                        makeChart(tempChartData, false);
+                    }
+                    break;
+                case ChartType.YEAR:
+                    if (y == year) {
+                        tempChartData.add(state);
+                        makeChart(tempChartData, false);
+                    }
+                    break;
+            }
+        }
+    };
+
+    private void getChartData(final int year, final int month, final int day, final int hour, final int type) {
+        Observable.just(1)
+                .map(new Function<Integer, List<State>>() {
+                    @Override
+                    public List<State> apply(Integer integer) throws Exception {
+                        switch (type) {
+                            case ChartType.HOUR:
+                            default:
+                                Calendar calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.MONTH, month);
+                                calendar.set(Calendar.DAY_OF_MONTH, day);
+                                calendar.set(Calendar.HOUR_OF_DAY, hour);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+
+                                long from = calendar.getTimeInMillis();
+                                calendar.set(Calendar.HOUR_OF_DAY, hour + 1);
+                                long to = calendar.getTimeInMillis();
+                                return stateDao.getStateAsc(address, from, to);
+
+                            case ChartType.DAY:
+                                calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.MONTH, month);
+                                calendar.set(Calendar.DAY_OF_MONTH, day);
+                                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+
+                                from = calendar.getTimeInMillis();
+                                calendar.set(Calendar.DAY_OF_MONTH, day + 1);
+                                to = calendar.getTimeInMillis();
+                                return stateDao.getStateAsc(address, from, to);
+
+                            case ChartType.MONTH:
+                                calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.MONTH, month);
+                                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+
+                                from = calendar.getTimeInMillis();
+                                calendar.set(Calendar.MONTH, month + 1);
+                                to = calendar.getTimeInMillis();
+                                return stateDao.getStateAsc(address, from, to);
+
+                            case ChartType.YEAR:
+                                calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.MONTH, 0);
+                                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+
+                                from = calendar.getTimeInMillis();
+                                calendar.set(Calendar.YEAR, year + 1);
+                                to = calendar.getTimeInMillis();
+                                return stateDao.getStateAsc(address, from, to);
+                        }
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Observer<List<State>>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+                        if (view != null) {
+                            view.showLoading();
+                        }
+                    }
+
+                    @Override
+                    public void onNext(List<State> states) {
+                        tempChartData = states;
+                        makeChart(states, true);
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        if (view != null) {
+                            view.cancelLoading();
+                        }
+                    }
+
+                    @Override
+                    public void onComplete() {
+                    }
+                });
+    }
+
+    private void makeChart(final List<State> list, boolean enablePosition) {
+        final int position;
+        if (enablePosition) {
+            switch (type) {
+                default:
+                    position = -1;
+                    break;
+                case ChartType.HOUR:
+                    Calendar calendar = Calendar.getInstance();
+                    int y = calendar.get(Calendar.YEAR);
+                    int m = calendar.get(Calendar.MONTH);
+                    int d = calendar.get(Calendar.DAY_OF_MONTH);
+                    int h = calendar.get(Calendar.HOUR_OF_DAY);
+                    int mm = calendar.get(Calendar.MINUTE);
+                    if (y == year && m == month && d == day && h == hour) {
+                        position = mm - 1;
+                    } else {
+                        position = -1;
+                    }
+                    break;
+                case ChartType.DAY:
+                    calendar = Calendar.getInstance();
+                    y = calendar.get(Calendar.YEAR);
+                    m = calendar.get(Calendar.MONTH);
+                    d = calendar.get(Calendar.DAY_OF_MONTH);
+                    h = calendar.get(Calendar.HOUR_OF_DAY);
+                    if (y == year && m == month && d == day) {
+                        position = h - 1;
+                    } else {
+                        position = -1;
+                    }
+                    break;
+                case ChartType.MONTH:
+                    calendar = Calendar.getInstance();
+                    y = calendar.get(Calendar.YEAR);
+                    m = calendar.get(Calendar.MONTH);
+                    d = calendar.get(Calendar.DAY_OF_MONTH);
+                    if (y == year && m == month) {
+                        position = d - 1;
+                    } else {
+                        position = -1;
+                    }
+                    break;
+                case ChartType.YEAR:
+                    calendar = Calendar.getInstance();
+                    y = calendar.get(Calendar.YEAR);
+                    m = calendar.get(Calendar.MONTH);
+                    if (y == year) {
+                        position = m;
+                    } else {
+                        position = -1;
+                    }
+                    break;
+            }
+        } else {
+            position = -1;
+        }
+
         Observable.just(1)
                 .map(new Function<Integer, List<BarEntry>>() {
                     @Override
                     public List<BarEntry> apply(Integer integer) throws Exception {
-                        Calendar calendar = Calendar.getInstance();
-                        calendar.set(Calendar.YEAR, year);
-                        calendar.set(Calendar.DAY_OF_MONTH, 1);
-                        calendar.set(Calendar.HOUR_OF_DAY, 0);
-                        calendar.set(Calendar.MINUTE, 0);
-                        calendar.set(Calendar.SECOND, 0);
-                        calendar.set(Calendar.MILLISECOND, 0);
+
+                        List<ChartData> temp = new ArrayList<>();
+                        switch (type) {
+                            case ChartType.HOUR:
+                            default:
+                                Calendar calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.MONTH, month);
+                                calendar.set(Calendar.DAY_OF_MONTH, day);
+                                calendar.set(Calendar.HOUR_OF_DAY, hour);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+                                long startTime = calendar.getTimeInMillis();
+                                for (int i = 0; i < 60; i++) {
+                                    ChartData chartData = new ChartData(startTime + i * 60000, startTime + (i + 1) * 60000, "HH:mm");
+                                    temp.add(chartData);
+                                }
+                                break;
+                            case ChartType.DAY:
+                                calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.MONTH, month);
+                                calendar.set(Calendar.DAY_OF_MONTH, day);
+                                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+                                startTime = calendar.getTimeInMillis();
+                                for (int i = 0; i < 24; i++) {
+                                    ChartData chartData = new ChartData(startTime + i * 60000 * 60, startTime + (i + 1) * 60000 * 60, "HH:00");
+                                    temp.add(chartData);
+                                }
+                                break;
+                            case ChartType.MONTH:
+                                calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.MONTH, month);
+                                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+                                startTime = calendar.getTimeInMillis();
+                                calendar.set(Calendar.MONTH, month + 1);
+                                calendar.set(Calendar.DAY_OF_MONTH, 0);
+                                int dayCount = calendar.get(Calendar.DAY_OF_MONTH);
+                                for (int i = 0; i < dayCount; i++) {
+                                    ChartData chartData = new ChartData(startTime + i * 60000L * 60 * 24, startTime + (i + 1) * 60000L * 60 * 24, monthXAxisFormat);
+                                    temp.add(chartData);
+                                }
+                                break;
+                            case ChartType.YEAR:
+                                calendar = Calendar.getInstance();
+                                calendar.set(Calendar.YEAR, year);
+                                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                                calendar.set(Calendar.MINUTE, 0);
+                                calendar.set(Calendar.SECOND, 0);
+                                calendar.set(Calendar.MILLISECOND, 0);
+                                for (int i = 0; i < 12; i++) {
+                                    calendar.set(Calendar.MONTH, i);
+                                    long from = calendar.getTimeInMillis();
+                                    calendar.set(Calendar.MONTH, i + 1);
+                                    long to = calendar.getTimeInMillis();
+                                    ChartData chartData = new ChartData(from, to, "MM");
+                                    temp.add(chartData);
+                                }
+                                break;
+                        }
+
+                        for (int i = 0; i < list.size(); i++) {
+                            State state = list.get(i);
+                            for (int j = 0; j < temp.size(); j++) {
+                                ChartData chartData = temp.get(j);
+                                if (chartData.isMatch(state.time)) {
+                                    chartData.addCount(state.movementsCount);
+                                    break;
+                                }
+                            }
+                        }
 
                         List<BarEntry> ret = new ArrayList<>();
-                        for (int i = 0; i < 12; i++) {
-                            calendar.set(Calendar.MONTH, i);
-                            long from = calendar.getTimeInMillis();
-                            calendar.set(Calendar.MONTH, i + 1);
-                            long to = calendar.getTimeInMillis();
-                            List<State> states = stateDao.getStateAsc(address, from, to);
-                            int count = 0;
-                            for (int j = 0; j < states.size(); j++) {
-                                State state = states.get(j);
-                                count += state.movementsCount;
-                            }
-                            BarEntry barEntry = new BarEntry(i, count, TimeUtil.getTime(from, yearXAxisFormat));
+                        for (int i = 0; i < temp.size(); i++) {
+                            ChartData chartData = temp.get(i);
+                            BarEntry barEntry = new BarEntry(i, chartData.getCount(), TimeUtil.getTime(chartData.getStartTime(), chartData.getTimeFormat()));
                             ret.add(barEntry);
                         }
                         return ret;
                     }
                 })
-                .subscribeOn(Schedulers.io())
+                .subscribeOn(Schedulers.computation())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Observer<List<BarEntry>>() {
                     @Override
                     public void onSubscribe(Disposable d) {
-                        if (view != null) {
-                            view.showLoading();
-                        }
                     }
 
                     @Override
                     public void onNext(List<BarEntry> barEntries) {
                         if (view != null) {
-                            List<String> list = new ArrayList<>();
-                            for (int i = 0; i < barEntries.size(); i++) {
-                                list.add(barEntries.get(i).getData() + "  -->  " + (int) barEntries.get(i).getX() + "  movements");
-                            }
-
                             view.cancelLoading();
+                            switch (type) {
+                                case ChartType.HOUR:
+                                    view.showHourChart(barEntries, position);
+                                default:
+                                    break;
+                                case ChartType.DAY:
+                                    view.showDayChart(barEntries, position);
+                                    break;
+                                case ChartType.MONTH:
+                                    view.showMonthChart(barEntries, position);
+                                    break;
+                                case ChartType.YEAR:
+                                    view.showYearChart(barEntries);
+                                    break;
+                            }
                         }
                     }
 
@@ -477,197 +784,37 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
                 });
     }
 
-    private void createChartParameters(long time, int type, String timeFormat) {
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTimeInMillis(time);
-        switch (type) {
-            case ChartType.HOUR:
-            case ChartType.DAY:
-            default:
-                calendar.set(Calendar.HOUR_OF_DAY, 0);// 当天0时
-                calendar.set(Calendar.MINUTE, 0);
-                calendar.set(Calendar.SECOND, 0);
-                calendar.set(Calendar.MILLISECOND, 0);
-                from = calendar.getTimeInMillis();
-                to = from + 60000 * 60 * 24;
-                switch (type) {
-                    default:
-                        interval = 60000;// 1分钟
-                        xAxisFormat = "HH:mm";
-                        break;
-                    case ChartType.DAY:
-                        interval = 60000 * 60;// 1小时
-                        xAxisFormat = "HH:00";
-                        break;
-                }
-                break;
-            case ChartType.MONTH:
-            case ChartType.YEAR:
-                switch (timeFormat) {
-                    case TimeFormatType.DATE_1_1:
-                    case TimeFormatType.DATE_1_2:
-                    default:
-                        xAxisFormat = "MM/dd";
-                        break;
-                    case TimeFormatType.DATE_1_3:
-                        xAxisFormat = "dd/MM";
-                        break;
-                    case TimeFormatType.DATE_2_1:
-                    case TimeFormatType.DATE_2_2:
-                        xAxisFormat = "MM-dd";
-                        break;
-                    case TimeFormatType.DATE_2_3:
-                        xAxisFormat = "dd-MM";
-                        break;
-                    case TimeFormatType.DATE_3_1:
-                    case TimeFormatType.DATE_3_2:
-                        xAxisFormat = "MM.dd";
-                        break;
-                    case TimeFormatType.DATE_3_3:
-                        xAxisFormat = "dd.MM";
-                        break;
-                }
-                switch (type) {
-                    case ChartType.MONTH:
-                        int month = calendar.get(Calendar.MONTH);
-                        calendar.set(Calendar.DAY_OF_MONTH, 1);// 月初
-                        calendar.set(Calendar.HOUR_OF_DAY, 0);
-                        calendar.set(Calendar.MINUTE, 0);
-                        calendar.set(Calendar.SECOND, 0);
-                        calendar.set(Calendar.MILLISECOND, 0);
-                        from = calendar.getTimeInMillis();
-                        calendar.set(Calendar.MONTH, month + 1);
-                        calendar.set(Calendar.DAY_OF_MONTH, 1);
-                        calendar.set(Calendar.HOUR_OF_DAY, 0);
-                        calendar.set(Calendar.MINUTE, 0);
-                        calendar.set(Calendar.SECOND, 0);
-                        calendar.set(Calendar.MILLISECOND, 0);
-                        to = calendar.getTimeInMillis();
-                        interval = 60000 * 60 * 24;// 1天
-                        break;
-                    case ChartType.YEAR:
-                        int year = calendar.get(Calendar.YEAR);
-                        calendar.set(Calendar.WEEK_OF_YEAR, 1);// 年第一周周日开始
-                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
-                        calendar.set(Calendar.HOUR_OF_DAY, 0);
-                        calendar.set(Calendar.MINUTE, 0);
-                        calendar.set(Calendar.SECOND, 0);
-                        calendar.set(Calendar.MILLISECOND, 0);
-                        from = calendar.getTimeInMillis();
-                        calendar.set(Calendar.YEAR, year + 1);
-                        calendar.set(Calendar.WEEK_OF_YEAR, 1);// 年第一周周日开始
-                        calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
-                        calendar.set(Calendar.HOUR_OF_DAY, 0);
-                        calendar.set(Calendar.MINUTE, 0);
-                        calendar.set(Calendar.SECOND, 0);
-                        calendar.set(Calendar.MILLISECOND, 0);
-                        to = calendar.getTimeInMillis();
-                        interval = 60000l * 60l * 24l * 7l;// 7天
-                        break;
-                }
-                break;
-        }
-    }
+    private static class ChartData {
 
-    private void getChartStates(String address, final long from, final long to) {
-        deviceSource.getStatesDesc(address, from, to, new DeviceSource.GetStatesDescCallback() {
-            @Override
-            public void onStatesLoaded(List<State> states) {
-                tempChartData.clear();
-                tempChartData.addAll(states);
-                int position = makeChartCurrentPosition(true, from, to, interval);
-                List<BarEntry> data = makeChart(states, from, to, interval, xAxisFormat);
-                if (view != null) {
-                    view.cancelLoading();
-                    view.showChart(data, position);
-                }
-            }
-        });
-    }
+        private long startTime;
+        private long endTime;
+        private int count;
+        private String timeFormat;
 
-    private List<String> makeLog(List<State> list, String format) {
-        List<String> ret = new ArrayList<>();
-
-        Calendar calendar = Calendar.getInstance();
-        int tempCount = 0;
-        long tempTime = -1;
-        int tempHour = -1;
-        int tempMinute = -1;
-        for (int i = 0; i < list.size(); i++) {
-            State state = list.get(i);
-            int count = state.movementsCount;
-            long time = state.time;
-            calendar.setTimeInMillis(time);
-            int hour = calendar.get(Calendar.HOUR_OF_DAY);
-            int minute = calendar.get(Calendar.MINUTE);
-            if (tempTime == -1) {
-                tempTime = time;
-                tempHour = hour;
-                tempMinute = minute;
-            }
-            if (state.type == StateType.RESET) {
-                if (tempCount != 0) {
-                    String log = TimeUtil.getTime(tempTime, format + "  HH:mm") + "  -->  " + tempCount + "  movements";
-                    ret.add(log);
-                }
-                String log = TimeUtil.getTime(time, format + "  HH:mm:ss") + "  -->  reset";
-                ret.add(log);
-                tempCount = 0;
-                tempTime = -1;
-                tempHour = -1;
-                tempMinute = -1;
-            } else {
-                if (tempHour != hour || tempMinute != minute) {
-                    if (tempCount != 0) {
-                        String log = TimeUtil.getTime(tempTime, format + "  HH:mm") + "  -->  " + tempCount + "  movements";
-                        ret.add(log);
-                    }
-                    tempCount = 0;
-                    tempHour = hour;
-                    tempMinute = minute;
-                }
-                tempCount += count;
-                tempTime = time;
-            }
+        public ChartData(long startTime, long endTime, String timeFormat) {
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.timeFormat = timeFormat;
         }
 
-        if (tempCount != 0) {
-            String log = TimeUtil.getTime(tempTime, format + "  HH:mm") + "  -->  " + tempCount + "  movements";
-            ret.add(log);
+        public boolean isMatch(long time) {
+            return startTime <= time && time < endTime;
         }
 
-        return ret;
-    }
-
-    private int makeChartCurrentPosition(boolean enableCurrentPosition, long from, long to, long interval) {
-        Calendar calendar = Calendar.getInstance();
-        long now = calendar.getTimeInMillis();
-        if (enableCurrentPosition && from <= now && now < to) {
-            return (int) ((now - from) / interval);
+        public void addCount(int c) {
+            count += c;
         }
-        return -1;
-    }
 
-    private List<BarEntry> makeChart(List<State> list, long from, long to, long interval, String xAxisFormat) {
-        List<BarEntry> ret = new ArrayList<>();
-        for (int i = 0; from + interval * i <= to; i++) {
-            int count = 0;
-            for (int j = list.size() - 1; j >= 0; j--) {
-                State state = list.get(j);
-                long time = state.time;
-                if (from + interval * i <= time && time < from + interval * (i + 1)) {
-                    count += state.movementsCount;
-                    list.remove(j);
-                } else {
-                    break;
-                }
-            }
-
-            String xAxisValue = TimeUtil.getTime(from + interval * i, xAxisFormat);
-            BarEntry barEntry = new BarEntry(i, count);
-            barEntry.setData(xAxisValue);
-            ret.add(barEntry);
+        public int getCount() {
+            return count;
         }
-        return ret;
+
+        public long getStartTime() {
+            return startTime;
+        }
+
+        public String getTimeFormat() {
+            return timeFormat;
+        }
     }
 }

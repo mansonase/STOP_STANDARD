@@ -53,12 +53,18 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
     RadioButton month;
     @BindView(R.id.year)
     RadioButton year;
-    @BindView(R.id.chart)
-    ChartView chart;
     @BindView(R.id.date)
     TextView date;
     @BindView(R.id.text_hour)
     TextView textHour;
+    @BindView(R.id.year_chart)
+    ChartView yearChart;
+    @BindView(R.id.hour_chart)
+    ChartView hourChart;
+    @BindView(R.id.day_chart)
+    ChartView dayChart;
+    @BindView(R.id.month_chart)
+    ChartView monthChart;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -197,11 +203,42 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
     }
 
     @Override
-    public void showChart(List<BarEntry> list, int position) {
-        chart.setData(list, position);
+    public void showHourChart(List<BarEntry> list, int position) {
+        hourChart.setVisibility(View.VISIBLE);
+        dayChart.setVisibility(View.GONE);
+        monthChart.setVisibility(View.GONE);
+        yearChart.setVisibility(View.GONE);
+        hourChart.setData(list, position, 20, 0.85f);
     }
 
-    @OnClick({R.id.previous_day, R.id.date, R.id.next_day, R.id.previous_hour, R.id.hour, R.id.next_hour})
+    @Override
+    public void showDayChart(List<BarEntry> list, int position) {
+        hourChart.setVisibility(View.GONE);
+        dayChart.setVisibility(View.VISIBLE);
+        monthChart.setVisibility(View.GONE);
+        yearChart.setVisibility(View.GONE);
+        dayChart.setData(list, position, 20,0.85f);
+    }
+
+    @Override
+    public void showMonthChart(List<BarEntry> list, int position) {
+        hourChart.setVisibility(View.GONE);
+        dayChart.setVisibility(View.GONE);
+        monthChart.setVisibility(View.VISIBLE);
+        yearChart.setVisibility(View.GONE);
+        monthChart.setData(list, position, 20,0.85f);
+    }
+
+    @Override
+    public void showYearChart(List<BarEntry> list) {
+        hourChart.setVisibility(View.GONE);
+        dayChart.setVisibility(View.GONE);
+        monthChart.setVisibility(View.GONE);
+        yearChart.setVisibility(View.VISIBLE);
+        yearChart.setData(list, -1, 12,0.51f);
+    }
+
+    @OnClick({R.id.previous_day, R.id.date, R.id.next_day, R.id.previous_hour, R.id.text_hour, R.id.next_hour})
     public void onViewClicked(View view) {
         switch (view.getId()) {
             case R.id.previous_day:
@@ -216,8 +253,8 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
             case R.id.previous_hour:
                 presenter.previousHour();
                 break;
-            case R.id.hour:
-                presenter.showTimePicker();
+            case R.id.text_hour:
+//                presenter.showTimePicker();
                 break;
             case R.id.next_hour:
                 presenter.nextHour();

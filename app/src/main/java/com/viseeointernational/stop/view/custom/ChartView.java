@@ -92,7 +92,7 @@ public class ChartView extends BarChart {
         rightAxis.setAxisMinimum(0);
 
         setDoubleTapToZoomEnabled(false);
-        setPinchZoom(true);
+        setPinchZoom(false);
     }
 
     private IValueFormatter iValueFormatter = new IValueFormatter() {
@@ -107,7 +107,7 @@ public class ChartView extends BarChart {
 
     private List<BarEntry> list = new ArrayList<>();
 
-    public void setData(List<BarEntry> list, int position) {
+    public void setData(List<BarEntry> list, int position, int visibleSize, float scale) {
         Log.d(TAG, list.size() + "  " + position);
         this.list.clear();
         this.list.addAll(list);
@@ -127,10 +127,11 @@ public class ChartView extends BarChart {
             dataSet.setValueTextColor(Color.WHITE);
             dataSet.setValueTextSize(14);
             BarData barData = new BarData(dataSet);
+            barData.setBarWidth(scale);
             setData(barData);
         }
-        setVisibleXRange(20, 20);
-        setVisibleXRange(list.size(), 20);
+        setVisibleXRange(visibleSize, visibleSize);
+        setVisibleXRange(list.size(), visibleSize);
         if (position != -1) {
             zoom(1, 1, position, 1, YAxis.AxisDependency.LEFT);
         }

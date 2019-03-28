@@ -233,9 +233,34 @@
         android:textSize="14dp" />
 
     <com.viseeointernational.stop.view.custom.ChartView
-        android:id="@+id/chart"
+        android:id="@+id/hour_chart"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:layout_margin="15dp"
+        android:visibility="visible"
+        android:layout_weight="3" />
+
+    <com.viseeointernational.stop.view.custom.ChartView
+        android:id="@+id/day_chart"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_margin="15dp"
+        android:visibility="gone"
+        android:layout_weight="3" />
+
+    <com.viseeointernational.stop.view.custom.ChartView
+        android:id="@+id/month_chart"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_margin="15dp"
+        android:visibility="gone"
+        android:layout_weight="3" />
+
+    <com.viseeointernational.stop.view.custom.ChartView
+        android:id="@+id/year_chart"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:visibility="gone"
         android:layout_margin="15dp"
         android:layout_weight="3" />
 

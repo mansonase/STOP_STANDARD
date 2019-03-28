@@ -23,10 +23,10 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <service android:name="com.baidu.location.f" android:enabled="true" android:process=":remote"/>
-        <meta-data
-            android:name="com.baidu.lbsapi.API_KEY"
-            android:value="tVwkav82WoGEeLhAcyVKx6n2GSb1W47u" />
+        <!--<service android:name="com.baidu.location.f" android:enabled="true" android:process=":remote"/>-->
+        <!--<meta-data-->
+            <!--android:name="com.baidu.lbsapi.API_KEY"-->
+            <!--android:value="tVwkav82WoGEeLhAcyVKx6n2GSb1W47u" />-->
 
         <uses-library
             android:name="org.apache.http.legacy"

@@ -26,7 +26,13 @@ public interface DetailActivityContract {
 
         void showTimePicker(int hour);
 
-        void showChart(List<BarEntry> list, int position);
+        void showHourChart(List<BarEntry> list, int position);
+
+        void showDayChart(List<BarEntry> list, int position);
+
+        void showMonthChart(List<BarEntry> list, int position);
+
+        void showYearChart(List<BarEntry> list);
 
         void showLog(List<String> list);
     }

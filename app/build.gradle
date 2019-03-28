@@ -63,13 +63,6 @@ android {
 //            manifestPlaceholders = [fileProvider: "com.viseeointernational.stop.go.fileprovider"]
 //        }
     }
-
-    sourceSets {
-        main {
-            jniLibs.srcDirs 'libs'
-            jni.srcDirs = []    // disable automatic ndk-build
-        }
-    }
 }
 
 dependencies {
