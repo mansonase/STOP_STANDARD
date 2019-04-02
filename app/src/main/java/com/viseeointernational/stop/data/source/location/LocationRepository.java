@@ -64,17 +64,17 @@ public class LocationRepository implements LocationSource {
 
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
-
+            Log.d(TAG, "gps获取位置"+provider);
         }
 
         @Override
         public void onProviderEnabled(String provider) {
-
+            Log.d(TAG, "gps获取位置"+provider);
         }
 
         @Override
         public void onProviderDisabled(String provider) {
-
+            Log.d(TAG, "gps获取位置"+provider);
         }
     };
 
@@ -87,17 +87,17 @@ public class LocationRepository implements LocationSource {
 
         @Override
         public void onStatusChanged(String provider, int status, Bundle extras) {
-
+            Log.d(TAG, "gps获取位置"+provider);
         }
 
         @Override
         public void onProviderEnabled(String provider) {
-
+            Log.d(TAG, "gps获取位置"+provider);
         }
 
         @Override
         public void onProviderDisabled(String provider) {
-
+            Log.d(TAG, "gps获取位置"+provider);
         }
     };
 

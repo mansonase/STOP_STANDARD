@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.ListView;
@@ -242,6 +243,7 @@ public class DetailActivity extends BaseActivity implements DetailActivityContra
     public void onViewClicked(View view) {
         switch (view.getId()) {
             case R.id.previous_day:
+                Log.d(TAG,"george here");
                 presenter.previousDay();
                 break;
             case R.id.date:

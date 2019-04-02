@@ -2,6 +2,7 @@ package com.viseeointernational.stop.view.page.detail;
 
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.github.mikephil.charting.data.BarEntry;
 import com.viseeointernational.stop.data.constant.ChartType;
@@ -134,7 +135,7 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         }
     }
 
-    private void showDate(int year, int month, int day) {
+    private Calendar showDate(int year, int month, int day) {
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.YEAR, year);
         calendar.set(Calendar.MONTH, month);
@@ -142,6 +143,7 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         if (view != null) {
             view.showDate(TimeUtil.getTime(calendar.getTimeInMillis(), timeFormat));
         }
+        return calendar;
     }
 
     private void showHour(int hour) {
@@ -221,7 +223,10 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     @Override
     public void previousDay() {
         day--;
-        showDate(year, month, day);
+        Calendar calendar = showDate(year, month, day);
+        year=calendar.get(Calendar.YEAR);
+        month=calendar.get(Calendar.MONTH);
+        day=calendar.get(Calendar.DAY_OF_MONTH);
         getLogData(year, month, day);
         getChartData(year, month, day, hour, type);
     }
@@ -229,7 +234,10 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
     @Override
     public void nextDay() {
         day++;
-        showDate(year, month, day);
+        Calendar calendar = showDate(year, month, day);
+        year=calendar.get(Calendar.YEAR);
+        month=calendar.get(Calendar.MONTH);
+        day=calendar.get(Calendar.DAY_OF_MONTH);
         getLogData(year, month, day);
         getChartData(year, month, day, hour, type);
     }
@@ -248,7 +256,10 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         } else {
             day--;
             hour = 23;
-            showDate(year, month, day);
+            Calendar calendar = showDate(year, month, day);
+            year=calendar.get(Calendar.YEAR);
+            month=calendar.get(Calendar.MONTH);
+            day=calendar.get(Calendar.DAY_OF_MONTH);
             getLogData(year, month, day);
         }
         showHour(hour);
@@ -262,7 +273,10 @@ public class DetailActivityPresenter implements DetailActivityContract.Presenter
         } else {
             day++;
             hour = 0;
-            showDate(year, month, day);
+            Calendar calendar = showDate(year, month, day);
+            year=calendar.get(Calendar.YEAR);
+            month=calendar.get(Calendar.MONTH);
+            day=calendar.get(Calendar.DAY_OF_MONTH);
             getLogData(year, month, day);
         }
         showHour(hour);
