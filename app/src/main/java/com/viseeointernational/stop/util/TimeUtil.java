@@ -27,7 +27,7 @@ public class TimeUtil {
             case 6:
                 return "July";
             case 7:
-                return "Aguest";
+                return "Augest";
             case 8:
                 return "September";
             case 9:

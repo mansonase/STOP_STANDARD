@@ -279,13 +279,13 @@ public class BleService extends Service {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                if (newState == BluetoothProfile.STATE_CONNECTED) {// 连接成功
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
                     gatt.discoverServices();
-                } else {// 断开连接成功
+                } else {
                     String address = gatt.getDevice().getAddress();
                     gatt.close();
-                    releaseConnectedDevice(address);
-                    Log.d(TAG, "GATT已断开连接 " + address);
+                    Log.d(TAG, "已断开连接 " + address);
+                    releaseDevice(address);
                     sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0);
                 }
             } else {
@@ -294,27 +294,25 @@ public class BleService extends Service {
                 if (!connectedDevice.containsKey(address)) {// 正在连接的设备要重连
                     if (reconnectCount > 0) {
                         reconnectCount--;
-                        Log.d(TAG, "GATT正在重连 " + address);
-                        doConnect(address);
+                        Log.d(TAG, "正在重连 " + address);
+                        connect(address, false);
                     } else {
-                        Log.d(TAG, "GATT连接失败 " + address);
-                        releaseConnectedDevice(address);
+                        Log.d(TAG, "连接失败 " + address);
+                        releaseDevice(address);
                         sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0);
                     }
                 } else {// 已连接的设备断开连接
-                    Log.d(TAG, "GATT连接失败 " + address);
-                    releaseConnectedDevice(address);
+                    Log.d(TAG, "连接失败 " + address);
+                    releaseDevice(address);
                     sendEvent(BleEvent.GATT_DISCONNECTED, address, null, 0);
                 }
             }
         }
 
-        private void releaseConnectedDevice(String address) {
+        // 释放设备
+        private void releaseDevice(String address) {
             if (connectedDevice.containsKey(address)) {
-                BleDevice bleDevice = connectedDevice.get(address);
-                if (bleDevice != null) {
-                    bleDevice.release();
-                }
+                connectedDevice.get(address).release();
                 connectedDevice.remove(address);
             }
         }
@@ -337,9 +335,9 @@ public class BleService extends Service {
 
                 // 连接成功
                 String address = gatt.getDevice().getAddress();
-                BleDevice bleDevice = new BleDevice(address, gatt, characteristic);
-                connectedDevice.put(address, bleDevice);
-                Log.d(TAG, "GATT连接成功 " + address);
+                BleDevice tool = new BleDevice(address, gatt, characteristic);
+                connectedDevice.put(address, tool);
+                Log.d(TAG, "连接成功 " + address);
                 sendEvent(BleEvent.GATT_CONNECTED, address, null, 0);
             }
         }
@@ -349,10 +347,7 @@ public class BleService extends Service {
             byte[] data = characteristic.getValue();
             String address = gatt.getDevice().getAddress();
             if (connectedDevice.containsKey(address)) {// 收到数据丢给相应的设备
-                BleDevice bleDevice = connectedDevice.get(address);
-                if (bleDevice != null) {
-                    bleDevice.receiveReadData(data);
-                }
+                connectedDevice.get(address).receiveReadData(data);
             }
         }
     };
