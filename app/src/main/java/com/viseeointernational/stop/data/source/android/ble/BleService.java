@@ -295,7 +295,7 @@ public class BleService extends Service {
                     if (reconnectCount > 0) {
                         reconnectCount--;
                         Log.d(TAG, "正在重连 " + address);
-                        connect(address, false);
+                        doConnect(address);
                     } else {
                         Log.d(TAG, "连接失败 " + address);
                         releaseDevice(address);

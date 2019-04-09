@@ -42,7 +42,7 @@ public class ReadThread extends Thread {
                         }
                     } else {
                         if (result == null) {
-                            result = new byte[b + 3];// 第三个字节是长度
+                            result = new byte[(b & 0xff) + 3];// 第三个字节是长度
                             result[0] = (byte) 0xff;
                             result[1] = (byte) 0xaa;
                             result[2] = b;
